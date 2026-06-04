@@ -1,0 +1,7 @@
+{
+  "/page": "app/page.js",
+  "/results/page": "app/results/page.js",
+  "/hitl/page": "app/hitl/page.js",
+  "/not-found-bucket/page": "app/not-found-bucket/page.js",
+  "/config/page": "app/config/page.js"
+}
