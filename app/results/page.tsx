@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react"
 import { getMatched } from "@/lib/api"
 import StatusBadge from "@/components/StatusBadge"
-import { Download, Search } from "lucide-react"
+import { Download, Search, Building2 } from "lucide-react"
 
 export default function ResultsPage() {
   const [data, setData] = useState<any[]>([])
@@ -64,7 +64,7 @@ export default function ResultsPage() {
         {[
           { label: "Validation", value: valFilter, setter: setValFilter, options: ["passed", "failed"] },
           { label: "HITL Status", value: hitlFilter, setter: setHitlFilter, options: ["pending", "approved", "rejected"] },
-          { label: "Method", value: methodFilter, setter: setMethodFilter, options: ["cache", "regex", "fuzzy"] },
+          { label: "Method", value: methodFilter, setter: setMethodFilter, options: ["regex", "token_exact", "token_fuzzy", "token_scan"] },
         ].map(({ label, value, setter, options }) => (
           <select key={label} value={value} onChange={e => { setter(e.target.value); setPage(1) }}
             className="border rounded-lg px-3 py-2 text-sm text-gray-600 outline-none">
@@ -79,40 +79,47 @@ export default function ResultsPage() {
         <table className="w-full text-xs">
           <thead className="bg-[#1E3A5F] text-white">
             <tr>
-              {["ID","Bank","Date","Narrative","Credit Amt","Currency","Extracted Customer","Extracted Invoice",
-                "Method","Confidence","Matched Customer","Matched Invoice","Outstanding","Val. Status","HITL Status","Oracle Ref"].map(h => (
+              {["ID","Bank","BU","Date","Narrative","Credit Amt","Currency",
+                "Extracted Customer","Extracted Invoice","Method","Confidence",
+                "Matched Customer","Matched Invoice","Outstanding","Val. Status","HITL Status","Oracle Ref"].map(h => (
                 <th key={h} className="px-3 py-3 text-left font-semibold whitespace-nowrap">{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {data.length === 0 ? (
-              <tr><td colSpan={16} className="text-center py-8 text-gray-400">No data. Run the pipeline first.</td></tr>
+              <tr><td colSpan={17} className="text-center py-8 text-gray-400">No data. Run the pipeline first.</td></tr>
             ) : data.map((r, i) => (
               <tr key={r.id} className={i % 2 === 0 ? "bg-white" : "bg-gray-50"}>
                 <td className="px-3 py-2">{r.id}</td>
                 <td className="px-3 py-2 whitespace-nowrap">{r.bank_name}</td>
+                <td className="px-3 py-2 whitespace-nowrap">
+                  {r.business_unit ? (
+                    <span className="inline-flex items-center gap-1 text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded-full px-2 py-0.5 font-medium">
+                      <Building2 size={9} /> {r.business_unit}
+                    </span>
+                  ) : <span className="text-gray-300">—</span>}
+                </td>
                 <td className="px-3 py-2 whitespace-nowrap">{r.statement_date}</td>
                 <td className="px-3 py-2 max-w-xs truncate" title={r.narrative}>{r.narrative}</td>
-                <td className="px-3 py-2 text-right">{r.credit_amount?.toLocaleString()}</td>
+                <td className="px-3 py-2 text-right font-mono">{r.credit_amount?.toLocaleString()}</td>
                 <td className="px-3 py-2">{r.statement_currency}</td>
                 <td className="px-3 py-2 whitespace-nowrap">{r.extracted_customer_name}</td>
-                <td className="px-3 py-2">{r.extracted_invoice_number}</td>
+                <td className="px-3 py-2 font-mono">{r.extracted_invoice_number}</td>
                 <td className="px-3 py-2"><StatusBadge value={r.extraction_method} /></td>
                 <td className="px-3 py-2">{r.confidence_score ? `${(r.confidence_score * 100).toFixed(0)}%` : "—"}</td>
                 <td className="px-3 py-2 whitespace-nowrap">{r.matched_customer_name}</td>
-                <td className="px-3 py-2">{r.matched_invoice_number}</td>
+                <td className="px-3 py-2 font-mono">{r.matched_invoice_number}</td>
                 <td className="px-3 py-2 text-right">{r.outstanding_amount?.toLocaleString()}</td>
                 <td className="px-3 py-2"><StatusBadge value={r.validation_status} /></td>
                 <td className="px-3 py-2"><StatusBadge value={r.hitl_status} /></td>
-                <td className="px-3 py-2 font-mono text-xs">{r.oracle_transaction_ref || "—"}</td>
+                <td className="px-3 py-2 font-mono text-xs text-green-700">{r.oracle_transaction_ref || "—"}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
 
-      {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex justify-center gap-2 mt-4">
           <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
