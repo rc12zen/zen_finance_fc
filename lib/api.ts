@@ -13,6 +13,7 @@ export const getNotFound = (params?: object) => API.get("/api/results/not-found"
 export const getValidationFailures = () => API.get("/api/results/validation-failures")
 
 export const getPendingHitl = () => API.get("/api/hitl/pending")
+export const getApprovalPreview = (id: number) => API.get(`/api/hitl/preview/${id}`)
 export const approveEntry = (id: number, comment?: string) => API.post(`/api/hitl/approve/${id}`, { comment })
 export const rejectEntry = (id: number, comment?: string) => API.post(`/api/hitl/reject/${id}`, { comment })
 export const approveBulk = (ids: number[]) => API.post("/api/hitl/approve-bulk", { ids })
