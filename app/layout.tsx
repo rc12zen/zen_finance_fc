@@ -24,8 +24,8 @@ const navItems = [
 	},
 	//
 	{
-		href: "/hitl",
-		label: "HITL Approval",
+		href: "/activity-log",
+		label: "Activity Log",
 		icon: CheckSquare,
 		section: "Settings",
 	},
