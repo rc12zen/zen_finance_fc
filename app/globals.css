@@ -2,8 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
+@font-face {
+  font-family: 'Bricolage Grotesque';
+  src: url('/BricolageGrotesqueVariable.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
 body {
   background-color: #f4f6f9;
   color: #1a1a2e;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Bricolage Grotesque', sans-serif;
 }
