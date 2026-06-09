@@ -537,7 +537,7 @@ export default function Dashboard() {
 							{(displayMetrics.not_found ?? 0).toLocaleString()}
 						</div>
 						<div className="mt-2 pt-1.5 text-[10px] text-gray-400 font-medium leading-normal">
-							Require manual review
+							Needs manual review
 						</div>
 					</div>
 
