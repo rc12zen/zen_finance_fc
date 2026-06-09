@@ -16,8 +16,8 @@ import { useEffect, useState } from "react";
 
 const navItems = [
 	{ href: "/home", label: "Home", icon: Home },
-	{ href: "/results", label: "Matched Results", icon: BarChart2 },
-	{ href: "/not-found-bucket", label: "Not Found", icon: AlertCircle },
+	{ href: "/analysis-history", label: "Analysis History", icon: BarChart2 },
+	// { href: "/not-found-bucket", label: "Not Found", icon: AlertCircle },
 	{ href: "/hitl", label: "HITL Approval", icon: CheckSquare },
 	{ href: "/config", label: "Config", icon: Settings },
 ];
