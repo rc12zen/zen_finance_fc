@@ -312,7 +312,7 @@ export default function ResultsPage() {
 						onClick={exportCSV}
 						className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest bg-[#1E3A5F] hover:bg-[#2E6DA4] text-white px-4 py-2.5 rounded-sm shadow-xs transition-all"
 					>
-						<Download size={12} /> Export CSV Ledger
+						<Download size={12} /> Export CSV
 					</button>
 				</div>
 			</div>
