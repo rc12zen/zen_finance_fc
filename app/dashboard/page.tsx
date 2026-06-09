@@ -22,12 +22,12 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import {
-	PieChart,
-	Pie,
 	Cell,
-	Tooltip,
-	ResponsiveContainer,
 	Legend,
+	Pie,
+	PieChart,
+	ResponsiveContainer,
+	Tooltip,
 } from "recharts";
 import {
 	getAgingStatus,
@@ -61,11 +61,11 @@ interface Metrics {
 }
 
 const METRIC_CONFIG = {
-	found: { name: "Automated Matches", color: "#1E3A5F" },
-	notFound: { name: "Unresolved Exceptions", color: "#2E6DA4" },
-	passed: { name: "Compliant Clearances", color: "#4A90E2" },
-	failed: { name: "Validation Failures", color: "#e11d48" },
-	pending: { name: "Awaiting Authorization", color: "#f59e0b" },
+	found: { name: "Found", color: "#1E3A5F" },
+	notFound: { name: "Not Found", color: "#2E6DA4" },
+	passed: { name: "Passed Validation", color: "#4A90E2" },
+	failed: { name: "Failed Validation", color: "#e11d48" },
+	pending: { name: "Pending HITL", color: "#f59e0b" },
 };
 
 export default function Dashboard() {
@@ -256,22 +256,20 @@ export default function Dashboard() {
 
 	return (
 		<div className="space-y-6">
-			{/* UPDATED PROCEDURAL HERO BANNER */}
+			{/* RESTORED PROCEDURAL HERO BANNER TEXT EXCLUSIVELY */}
 			<div className="bg-white border border-gray-200 p-6 shadow-xs relative overflow-hidden">
 				<div className="absolute top-0 right-0 p-4 opacity-5 text-primary pointer-events-none">
 					<CloudLightning size={100} />
 				</div>
 				<div className="max-w-4xl">
 					<h2 className="text-sm font-black text-primary uppercase tracking-wider flex items-center gap-2">
-						Financial Reconciliation Workspace · {userDisplayName}
+						Welcome back, {userDisplayName}.
 					</h2>
 					<p className="text-xs text-gray-600 mt-2 leading-relaxed">
-						Initialize the daily matching cycle by uploading your banking
-						statements and aging ledger files below. Once started, the ingestion
-						engine systematically maps customer profiles, links open invoice
-						entries, and isolates exceptions for review—compressing a multi-step
-						verification process into a streamlined, seconds-long automated
-						clearance.
+						Your workspace is ready. Upload your account statements and aging
+						report below, then start the matching process. The AI will
+						automatically identify customers, match invoices, and flag anything
+						that needs your attention - all in seconds!
 					</p>
 				</div>
 			</div>
@@ -296,16 +294,15 @@ export default function Dashboard() {
 				<div className="bg-white border border-gray-200 p-5 shadow-xs flex flex-col justify-between min-h-[180px]">
 					<div>
 						<h3 className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-2 mb-3">
-							<Layers size={14} className="text-[#2E6DA4]" /> Aging Ledger
-							Master
+							<Layers size={14} className="text-[#2E6DA4]" /> Aging Report
 						</h3>
 						<button className="w-full flex items-center justify-center gap-2 border border-dashed border-gray-300 hover:border-primary text-primary py-3.5 px-4 text-[11px] font-bold uppercase tracking-wider bg-gray-50/50 hover:bg-gray-50 transition-all cursor-pointer">
 							<UploadCloud size={14} className="text-[#4A90E2]" />
-							<span>Ingest Subsidiary Ledger</span>
+							<span>Upload Aging Report</span>
 						</button>
 					</div>
 					<div className="mt-3 pt-2 border-t border-gray-100 flex items-center justify-between text-[11px] text-gray-500">
-						<span>Supported formats: XLS, CSV</span>
+						<span>Single XLS, CSV upload supported. Max 10 MB.</span>
 						{agingStatus.loaded ? (
 							<span className="text-[#4A90E2] font-bold flex items-center gap-1">
 								<CheckCircle2 size={12} />{" "}
@@ -313,7 +310,7 @@ export default function Dashboard() {
 							</span>
 						) : (
 							<span className="text-amber-600 font-medium">
-								No target file detected
+								No file uploaded
 							</span>
 						)}
 					</div>
@@ -322,18 +319,18 @@ export default function Dashboard() {
 				<div className="bg-white border border-gray-200 p-5 shadow-xs flex flex-col justify-between min-h-[180px]">
 					<div>
 						<h3 className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-2 mb-3">
-							<FileText size={14} className="text-[#2E6DA4]" /> Bank Account
+							<FileText size={14} className="text-[#2E6DA4]" /> Account
 							Statements
 						</h3>
 						<button className="w-full flex items-center justify-center gap-2 border border-dashed border-gray-300 hover:border-primary text-primary py-3.5 px-4 text-[11px] font-bold uppercase tracking-wider bg-gray-50/50 hover:bg-gray-50 transition-all cursor-pointer">
 							<UploadCloud size={14} className="text-[#4A90E2]" />
-							<span>Ingest Bank Statement Blocks</span>
+							<span>Upload Account Statements</span>
 						</button>
 					</div>
 					<div className="mt-3 pt-2 border-t border-gray-100 flex items-center justify-between text-[11px] text-gray-500">
-						<span>Supported formats: MT940, BAI2, CSV, PDF</span>
+						<span>Multiple XLS, CSV uploads supported. Max 10 MB per file.</span>
 						<span className="text-primary font-bold">
-							{files.length} statements verified
+							{files.length} statements loaded
 						</span>
 					</div>
 				</div>
@@ -347,7 +344,7 @@ export default function Dashboard() {
 						className={`text-[#4A90E2] ${isRunning ? "animate-spin" : ""}`}
 					/>
 					<div className="text-xs font-medium text-gray-200">
-						<span>Pipeline Engine Framework</span>
+						<span>Status</span>
 						<span className="text-gray-400 px-1.5">|</span>
 						<span className="text-white font-bold tracking-wide">
 							{getSystemStatusLabel()}
@@ -362,7 +359,7 @@ export default function Dashboard() {
 					className="w-full sm:w-auto flex items-center justify-center gap-2 bg-[#4A90E2] hover:bg-[#357ABD] text-white px-6 py-2.5 font-bold text-xs uppercase tracking-widest transition-all disabled:opacity-20 disabled:cursor-not-allowed shadow-xs whitespace-nowrap rounded-sm"
 				>
 					<Play size={11} className="fill-current" />
-					<span>Execute Matching Run</span>
+					<span>Start Matching Process</span>
 					<ArrowRight size={12} className="ml-0.5" />
 				</button>
 			</div>
@@ -373,7 +370,7 @@ export default function Dashboard() {
 				<div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 pb-4 border-b border-gray-100">
 					<div>
 						<h2 className="text-xs font-black text-primary uppercase tracking-wider">
-							Analytics Telemetry Dashboard
+							Metrics Dashboard
 						</h2>
 						<p className="text-[11px] text-gray-500 mt-0.5">
 							Overall summary for the selected evaluation period and contextual
@@ -499,7 +496,7 @@ export default function Dashboard() {
 						<div className="flex items-center gap-1.5 text-gray-400 mb-1">
 							<Layers size={13} className="text-[#1E3A5F]" />
 							<span className="text-[10px] font-bold uppercase tracking-wider">
-								Gross Items Scanned
+								Total Rows Ingested
 							</span>
 						</div>
 						<div className="text-xl font-black text-primary">
@@ -568,10 +565,10 @@ export default function Dashboard() {
 					</div>
 
 					<div className="border border-gray-200 p-4 rounded-sm bg-gray-50/30">
-						<div className="flex items-center gap-1.5 text-gray-400 mb-1">
+						<div className="flex items-center gap-1.5 text-emerald-600 mb-1">
 							<ClipboardCheck size={13} className="text-emerald-600" />
 							<span className="text-[10px] font-bold uppercase tracking-wider">
-								Oracle Fusion Commits
+								Approved
 							</span>
 						</div>
 						<div className="text-xl font-black text-primary">
@@ -583,7 +580,7 @@ export default function Dashboard() {
 						<div className="flex items-center gap-1.5 text-red-400 mb-1">
 							<Ban size={13} className="text-red-500" />
 							<span className="text-[10px] font-bold uppercase tracking-wider">
-								Declined Settlements
+								Rejected
 							</span>
 						</div>
 						<div className="text-xl font-black text-primary">
@@ -603,8 +600,8 @@ export default function Dashboard() {
 								Select Metrics to Display
 							</h4>
 							<p className="text-[11px] text-gray-500 mt-0.5">
-								Toggle tracking variables below to dynamically alter chart
-								distribution views.
+								Toggle variables below to dynamically alter chart distribution
+								views.
 							</p>
 						</div>
 
@@ -856,8 +853,7 @@ export default function Dashboard() {
 							AI Run Details
 						</h4>
 						<p className="text-[11px] text-gray-500 mt-0.5">
-							Infrastructure resources logged during the latest evaluation
-							runtime.
+							AI run details framework data specifications.
 						</p>
 					</div>
 
