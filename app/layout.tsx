@@ -1,4 +1,5 @@
 "use client";
+import Image from "next/image";
 import "./globals.css";
 import {
 	BarChart2,
@@ -91,7 +92,18 @@ export default function RootLayout({
 								>
 									<Menu size={18} />
 								</button>
-								<div className="flex items-center gap-3">
+
+								<div className="flex items-center gap-2">
+									{/* Logo */}
+									<div className="flex justify-center">
+										<Image
+											src="/logo.png"
+											alt="Cash Apply Logo"
+											width={48}
+											height={48}
+											className="object-contain"
+										/>
+									</div>
 									<div className="leading-tight border-r border-[#2E6DA4]/40 pr-4">
 										<div className="text-xs font-black uppercase tracking-tight whitespace-nowrap">
 											Cash Apply

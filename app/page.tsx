@@ -6,6 +6,7 @@ import {
 	Mail,
 	ShieldCheck,
 } from "lucide-react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import type React from "react";
 import { useState } from "react";
@@ -48,15 +49,20 @@ export default function LoginScreen() {
 				{/* BRAND HEADER SEGMENT */}
 				<div className="text-center space-y-2.5">
 					{/* (logo) */}
-					<div className="inline-flex items-center justify-center h-12 w-12 rounded-sm bg-[#1E3A5F] text-white shadow-sm">
-						<ShieldCheck size={26} className="text-[#4A90E2]" />
+					<div className="inline-flex items-center justify-center h-12 w-12 rounded-sm overflow-hidden">
+						<Image
+							src="/logo.png"
+							alt="Logo"
+							width={45}
+							height={45}
+							className="object-contain"
+						/>
 					</div>
 
 					{/* (title) */}
 					<h1 className="text-xl font-black tracking-tight text-[#1E3A5F] uppercase">
 						Cash Apply
 					</h1>
-
 					{/* (catchphrase) */}
 					<p className="text-xs text-gray-500 font-medium max-w-[280px] mx-auto leading-relaxed">
 						From bank statement to Fusion in seconds.
