@@ -22,21 +22,18 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import {
-	Cell,
-	Legend,
-	Pie,
 	PieChart,
-	ResponsiveContainer,
+	Pie,
+	Cell,
 	Tooltip,
+	ResponsiveContainer,
+	Legend,
 } from "recharts";
-import StatusBadge from "@/components/StatusBadge";
 import {
 	getAgingStatus,
 	getFiles,
 	getMetrics,
 	getStatus,
-	refreshAging,
-	resetRun,
 	startRun,
 } from "@/lib/api";
 
@@ -63,7 +60,6 @@ interface Metrics {
 	aging_report_row_count: number;
 }
 
-// Global Core Color Matrix - Perfectly synchronized across labels, pills, and chart paths
 const METRIC_CONFIG = {
 	found: { name: "Automated Matches", color: "#1E3A5F" },
 	notFound: { name: "Unresolved Exceptions", color: "#2E6DA4" },
@@ -74,21 +70,13 @@ const METRIC_CONFIG = {
 
 export default function Dashboard() {
 	const [files, setFiles] = useState<FileInfo[]>([]);
-	const [runStatus, setRunStatus] = useState<{
-		status: string;
-		message: string;
-		progress_current: number;
-	}>({
+	const [runStatus, setRunStatus] = useState({
 		status: "idle",
 		message: "",
 		progress_current: 0,
 	});
 	const [metrics, setMetrics] = useState<Metrics | null>(null);
-	const [agingStatus, setAgingStatus] = useState<{
-		loaded: boolean;
-		row_count: number;
-		filename: string | null;
-	}>({
+	const [agingStatus, setAgingStatus] = useState({
 		loaded: false,
 		row_count: 0,
 		filename: null,
@@ -96,13 +84,16 @@ export default function Dashboard() {
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState("");
 
-	// Dashboard Telemetry Filters State
+	// Dashboard Telemetry Filters State (Includes Custom Date toggle flag)
 	const [timePeriod, setTimePeriod] = useState("Last Analysis");
+	const [isCustomDateActive, setIsCustomDateActive] = useState(false);
+	const [customStartDate, setCustomStartDate] = useState("");
+	const [customEndDate, setCustomEndDate] = useState("");
+
 	const [selectedBank, setSelectedBank] = useState("All Banks");
 	const [selectedBU, setSelectedBU] = useState("All BUs");
 	const [selectedUser, setSelectedUser] = useState("All Users");
 
-	// Interactive Checklist Tracking Matrix
 	const [activeMetrics, setActiveMetrics] = useState({
 		found: true,
 		notFound: true,
@@ -149,8 +140,7 @@ export default function Dashboard() {
 			/(?:^|; )login_user_email_stub=([^;]*)/,
 		);
 		if (match && match[1]) {
-			const email = decodeURIComponent(match[1]);
-			setUserDisplayName(email.split("@")[0]);
+			setUserDisplayName(decodeURIComponent(match[1]).split("@")[0]);
 		}
 	}, [fetchFiles, fetchMetrics]);
 
@@ -187,6 +177,15 @@ export default function Dashboard() {
 		setLoading(false);
 	};
 
+	const handleTimePeriodSelect = (period: string) => {
+		setTimePeriod(period);
+		if (period === "Custom Date") {
+			setIsCustomDateActive(true);
+		} else {
+			setIsCustomDateActive(false);
+		}
+	};
+
 	const isRunning = runStatus.status === "running";
 
 	const getSystemStatusLabel = () => {
@@ -202,7 +201,6 @@ export default function Dashboard() {
 		setActiveMetrics((prev) => ({ ...prev, [key]: !prev[key] }));
 	};
 
-	// Generates complete configuration-mapped runtime structural chart array data
 	const getPieChartData = () => {
 		if (!metrics) return [];
 		const rawData = [
@@ -245,7 +243,6 @@ export default function Dashboard() {
 
 	const pieChartData = getPieChartData();
 
-	// Unified fallback baseline protection logic
 	const displayMetrics = metrics || {
 		total_rows_ingested: 0,
 		found: 0,
@@ -259,139 +256,98 @@ export default function Dashboard() {
 
 	return (
 		<div className="space-y-6">
-			{/* ONBOARDING HERO BANNER */}
-			<div className="bg-white border border-gray-200 p-6 shadow-sm relative overflow-hidden">
+			{/* UPDATED PROCEDURAL HERO BANNER */}
+			<div className="bg-white border border-gray-200 p-6 shadow-xs relative overflow-hidden">
 				<div className="absolute top-0 right-0 p-4 opacity-5 text-primary pointer-events-none">
-					<CloudLightning size={120} />
+					<CloudLightning size={100} />
 				</div>
-				<div className="max-w-3xl">
-					<h2 className="text-xl font-bold text-primary capitalize flex items-center gap-2">
-						Welcome back, {userDisplayName}
+				<div className="max-w-4xl">
+					<h2 className="text-sm font-black text-primary uppercase tracking-wider flex items-center gap-2">
+						Financial Reconciliation Workspace · {userDisplayName}
 					</h2>
-					<p className="text-sm text-gray-600 mt-1.5 leading-relaxed">
-						Your workspace is ready. Upload your account statements and aging
-						report below, then start the matching process. The AI will
-						automatically identify customers, match invoices, and flag anything
-						that needs your attention - all in seconds!
+					<p className="text-xs text-gray-600 mt-2 leading-relaxed">
+						Initialize the daily matching cycle by uploading your banking
+						statements and aging ledger files below. Once started, the ingestion
+						engine systematically maps customer profiles, links open invoice
+						entries, and isolates exceptions for review—compressing a multi-step
+						verification process into a streamlined, seconds-long automated
+						clearance.
 					</p>
-				</div>
-
-				<div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6 pt-6 border-t border-gray-100">
-					<div className="flex gap-3">
-						<div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-50 text-xs font-bold text-accent">
-							1
-						</div>
-						<div>
-							<h4 className="text-xs font-bold text-primary uppercase tracking-wide">
-								Review or add files
-							</h4>
-							<p className="text-[11px] text-gray-500 mt-0.5">
-								Check the files loaded below. Upload a new bank statement or
-								aging report if needed.
-							</p>
-						</div>
-					</div>
-					<div className="flex gap-3">
-						<div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-50 text-xs font-bold text-accent">
-							2
-						</div>
-						<div>
-							<h4 className="text-xs font-bold text-primary uppercase tracking-wide">
-								Start matching
-							</h4>
-							<p className="text-[11px] text-gray-500 mt-0.5">
-								Select the bank statement files you want to run and click Run
-								matching.
-							</p>
-						</div>
-					</div>
-					<div className="flex gap-3">
-						<div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-50 text-xs font-bold text-accent">
-							3
-						</div>
-						<div>
-							<h4 className="text-xs font-bold text-primary uppercase tracking-wide">
-								Review results
-							</h4>
-							<p className="text-[11px] text-gray-500 mt-0.5">
-								Go to Review and approve to validate AI-matched transactions, or
-								check Dashboard for analysis summary.
-							</p>
-						</div>
-					</div>
 				</div>
 			</div>
 
 			{error && (
-				<div className="bg-red-50/50 backdrop-blur-sm border-l-4 border-red-600 text-gray-900 px-4 py-3.5 shadow-sm text-sm flex items-center justify-between transition-all">
+				<div className="bg-red-50/50 backdrop-blur-sm border-l-4 border-red-600 text-gray-900 px-4 py-3.5 shadow-sm text-sm flex items-center justify-between">
 					<div className="flex items-center gap-3">
 						<AlertTriangle size={18} className="text-red-600 shrink-0" />
 						<span className="font-medium tracking-wide">{error}</span>
 					</div>
 					<button
 						onClick={() => setError("")}
-						className="text-gray-400 hover:text-gray-600 px-2 text-base"
+						className="text-gray-400 hover:text-gray-600 text-base px-2"
 					>
 						×
 					</button>
 				</div>
 			)}
 
-			{/* UPLOAD AREA ROW */}
+			{/* UPLOAD SEGMENTS */}
 			<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-				<div className="bg-white border border-gray-200 p-6 shadow-sm flex flex-col justify-between min-h-[220px]">
+				<div className="bg-white border border-gray-200 p-5 shadow-xs flex flex-col justify-between min-h-[180px]">
 					<div>
-						<h3 className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-2 mb-4">
-							<Layers size={14} className="text-accent" /> Aging Report
+						<h3 className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-2 mb-3">
+							<Layers size={14} className="text-[#2E6DA4]" /> Aging Ledger
+							Master
 						</h3>
-						<button className="w-full flex items-center justify-center gap-2.5 border border-dashed border-gray-300 hover:border-primary text-primary py-4 px-4 text-xs font-bold uppercase tracking-wider bg-gray-50/50 hover:bg-gray-50 transition-all group">
-							<UploadCloud size={16} className="text-accent shrink-0" />
-							<span>Upload from local</span>
+						<button className="w-full flex items-center justify-center gap-2 border border-dashed border-gray-300 hover:border-primary text-primary py-3.5 px-4 text-[11px] font-bold uppercase tracking-wider bg-gray-50/50 hover:bg-gray-50 transition-all cursor-pointer">
+							<UploadCloud size={14} className="text-[#4A90E2]" />
+							<span>Ingest Subsidiary Ledger</span>
 						</button>
 					</div>
-					<div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between text-[11px] text-gray-500">
-						<span>Supported: Excel, CSV (Max 10MB)</span>
+					<div className="mt-3 pt-2 border-t border-gray-100 flex items-center justify-between text-[11px] text-gray-500">
+						<span>Supported formats: XLS, CSV</span>
 						{agingStatus.loaded ? (
-							<span className="text-emerald-600 font-bold flex items-center gap-1">
+							<span className="text-[#4A90E2] font-bold flex items-center gap-1">
 								<CheckCircle2 size={12} />{" "}
 								{agingStatus.row_count.toLocaleString()} rows active
 							</span>
 						) : (
 							<span className="text-amber-600 font-medium">
-								No report loaded
+								No target file detected
 							</span>
 						)}
 					</div>
 				</div>
 
-				<div className="bg-white border border-gray-200 p-6 shadow-sm flex flex-col justify-between min-h-[220px]">
+				<div className="bg-white border border-gray-200 p-5 shadow-xs flex flex-col justify-between min-h-[180px]">
 					<div>
-						<h3 className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-2 mb-4">
-							<FileText size={14} className="text-accent" /> Account Statements
+						<h3 className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-2 mb-3">
+							<FileText size={14} className="text-[#2E6DA4]" /> Bank Account
+							Statements
 						</h3>
-						<button className="w-full flex items-center justify-center gap-2.5 border border-dashed border-gray-300 hover:border-primary text-primary py-4 px-4 text-xs font-bold uppercase tracking-wider bg-gray-50/50 hover:bg-gray-50 transition-all group">
-							<UploadCloud size={16} className="text-accent shrink-0" />
-							<span>Upload from local</span>
+						<button className="w-full flex items-center justify-center gap-2 border border-dashed border-gray-300 hover:border-primary text-primary py-3.5 px-4 text-[11px] font-bold uppercase tracking-wider bg-gray-50/50 hover:bg-gray-50 transition-all cursor-pointer">
+							<UploadCloud size={14} className="text-[#4A90E2]" />
+							<span>Ingest Bank Statement Blocks</span>
 						</button>
 					</div>
-					<div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between text-[11px] text-gray-500">
-						<span>Supported: MT940, BAI2, CSV, PDF</span>
+					<div className="mt-3 pt-2 border-t border-gray-100 flex items-center justify-between text-[11px] text-gray-500">
+						<span>Supported formats: MT940, BAI2, CSV, PDF</span>
 						<span className="text-primary font-bold">
-							{files.length} statements ready
+							{files.length} statements verified
 						</span>
 					</div>
 				</div>
 			</div>
 
-			{/* REFRAMED SYSTEM STATUS ENGINE ROW */}
-			<div className="bg-[#1E3A5F] text-white px-5 py-4 shadow-md flex flex-col sm:flex-row items-center justify-between gap-4 border border-[#172e4c]">
+			{/* RECONCILIATION ENGINE CONTROL BAR */}
+			<div className="bg-[#1E3A5F] text-white px-5 py-4 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4 border border-[#172e4c]">
 				<div className="flex items-center gap-3">
 					<RefreshCw
 						size={14}
 						className={`text-[#4A90E2] ${isRunning ? "animate-spin" : ""}`}
 					/>
 					<div className="text-xs font-medium text-gray-200">
-						<span>System Status</span>
+						<span>Pipeline Engine Framework</span>
 						<span className="text-gray-400 px-1.5">|</span>
 						<span className="text-white font-bold tracking-wide">
 							{getSystemStatusLabel()}
@@ -403,51 +359,75 @@ export default function Dashboard() {
 					disabled={
 						isRunning || loading || files.length === 0 || !agingStatus.loaded
 					}
-					className="w-full sm:w-auto flex items-center justify-center gap-2 bg-[#4A90E2] hover:bg-[#357ABD] text-white px-6 py-2.5 font-bold text-xs uppercase tracking-widest transition-all disabled:opacity-20 disabled:cursor-not-allowed shadow-md group whitespace-nowrap rounded-sm"
+					className="w-full sm:w-auto flex items-center justify-center gap-2 bg-[#4A90E2] hover:bg-[#357ABD] text-white px-6 py-2.5 font-bold text-xs uppercase tracking-widest transition-all disabled:opacity-20 disabled:cursor-not-allowed shadow-xs whitespace-nowrap rounded-sm"
 				>
 					<Play size={11} className="fill-current" />
-					<span>start analysis</span>
-					<ArrowRight
-						size={12}
-						className="ml-0.5 opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all"
-					/>
+					<span>Execute Matching Run</span>
+					<ArrowRight size={12} className="ml-0.5" />
 				</button>
 			</div>
 
-			{/* DASHBOARD CONTROL PANEL & TELEMETRY HUB */}
-			<div className="bg-white border border-gray-200 p-6 shadow-sm space-y-6">
-				{/* HEADER BLOCK */}
-				<div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-gray-100">
+			{/* TELEMETRY ENGINE LAYER */}
+			<div className="bg-white border border-gray-200 p-6 shadow-xs space-y-6">
+				{/* TIME PERIOD CONTROL BAR */}
+				<div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 pb-4 border-b border-gray-100">
 					<div>
-						<h2 className="text-base font-black text-primary uppercase tracking-tight">
-							Dashboard
+						<h2 className="text-xs font-black text-primary uppercase tracking-wider">
+							Analytics Telemetry Dashboard
 						</h2>
-						<p className="text-xs text-gray-500 mt-0.5">
-							Overall summary for the selected period and applied filters
+						<p className="text-[11px] text-gray-500 mt-0.5">
+							Overall summary for the selected evaluation period and contextual
+							ledger data subsets.
 						</p>
 					</div>
 
-					{/* TIME PERIOD PILLS */}
-					<div className="flex flex-wrap items-center gap-1.5 bg-gray-100 p-1 rounded-sm self-start md:self-auto">
-						{["Last Analysis", "Today", "Yesterday", "WTD", "MTD"].map(
-							(period) => (
+					<div className="flex flex-wrap items-center gap-2 self-start xl:self-auto">
+						{/* TIME CONFIGURATION PILLS CONTROLS */}
+						<div className="flex items-center gap-1 bg-gray-100 p-1 rounded-sm">
+							{[
+								"Last Analysis",
+								"Today",
+								"Yesterday",
+								"WTD",
+								"MTD",
+								"Custom Date",
+							].map((period) => (
 								<button
 									key={period}
-									onClick={() => setTimePeriod(period)}
-									className={`px-3 py-1 text-xs font-bold uppercase tracking-wider rounded-xs transition-all ${
+									onClick={() => handleTimePeriodSelect(period)}
+									className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-xs transition-all cursor-pointer ${
 										timePeriod === period
-											? "bg-[#1E3A5F] text-white shadow-sm"
+											? "bg-[#1E3A5F] text-white shadow-xs"
 											: "text-gray-500 hover:text-primary"
 									}`}
 								>
 									{period}
 								</button>
-							),
+							))}
+						</div>
+
+						{/* DYNAMIC INLINE CUSTOM DATE WINDOW EXTENSION */}
+						{isCustomDateActive && (
+							<div className="flex items-center gap-1.5 animate-slide-in border-l border-gray-200 pl-2 mt-2 sm:mt-0">
+								<input
+									type="date"
+									value={customStartDate}
+									onChange={(e) => setCustomStartDate(e.target.value)}
+									className="bg-gray-50 border border-gray-300 rounded-sm text-[10px] font-bold uppercase text-gray-600 px-2 py-1 outline-none focus:border-accent"
+								/>
+								<span className="text-[10px] font-bold text-gray-400">TO</span>
+								<input
+									type="date"
+									value={customEndDate}
+									onChange={(e) => setCustomEndDate(e.target.value)}
+									className="bg-gray-50 border border-gray-300 rounded-sm text-[10px] font-bold uppercase text-gray-600 px-2 py-1 outline-none focus:border-accent"
+								/>
+							</div>
 						)}
 					</div>
 				</div>
 
-				{/* DROPDOWNS CONTROL ROW */}
+				{/* CONTROLS SELECTION ROW */}
 				<div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
 					<div className="relative">
 						<Landmark
@@ -457,7 +437,7 @@ export default function Dashboard() {
 						<select
 							value={selectedBank}
 							onChange={(e) => setSelectedBank(e.target.value)}
-							className="w-full bg-white border border-gray-300 text-xs font-semibold text-primary pl-9 pr-8 py-2.5 rounded-sm appearance-none focus:outline-none focus:border-accent cursor-pointer transition-colors"
+							className="w-full bg-white border border-gray-300 text-xs font-bold text-primary pl-9 pr-8 py-2.5 rounded-sm appearance-none focus:outline-none focus:border-accent cursor-pointer"
 						>
 							<option>All Banks</option>
 							<option>Citibank Europe</option>
@@ -478,7 +458,7 @@ export default function Dashboard() {
 						<select
 							value={selectedBU}
 							onChange={(e) => setSelectedBU(e.target.value)}
-							className="w-full bg-white border border-gray-300 text-xs font-semibold text-primary pl-9 pr-8 py-2.5 rounded-sm appearance-none focus:outline-none focus:border-accent cursor-pointer transition-colors"
+							className="w-full bg-white border border-gray-300 text-xs font-bold text-primary pl-9 pr-8 py-2.5 rounded-sm appearance-none focus:outline-none focus:border-accent cursor-pointer"
 						>
 							<option>All BUs</option>
 							<option>North America Enterprise</option>
@@ -499,7 +479,7 @@ export default function Dashboard() {
 						<select
 							value={selectedUser}
 							onChange={(e) => setSelectedUser(e.target.value)}
-							className="w-full bg-white border border-gray-300 text-xs font-semibold text-primary pl-9 pr-8 py-2.5 rounded-sm appearance-none focus:outline-none focus:border-accent cursor-pointer transition-colors"
+							className="w-full bg-white border border-gray-300 text-xs font-bold text-primary pl-9 pr-8 py-2.5 rounded-sm appearance-none focus:outline-none focus:border-accent cursor-pointer"
 						>
 							<option>All Users</option>
 							<option>Admin Controller</option>
@@ -513,13 +493,13 @@ export default function Dashboard() {
 					</div>
 				</div>
 
-				{/* 8 MINI CARDS GRID */}
-				<div className="grid grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
+				{/* KPI CORE METRIC CARDS GRID */}
+				<div className="grid grid-cols-2 lg:grid-cols-4 gap-4 pt-1">
 					<div className="border border-gray-200 p-4 rounded-sm bg-gray-50/30">
 						<div className="flex items-center gap-1.5 text-gray-400 mb-1">
 							<Layers size={13} className="text-[#1E3A5F]" />
 							<span className="text-[10px] font-bold uppercase tracking-wider">
-								Gross Capital Scanned
+								Gross Items Scanned
 							</span>
 						</div>
 						<div className="text-xl font-black text-primary">
@@ -600,8 +580,8 @@ export default function Dashboard() {
 					</div>
 
 					<div className="border border-gray-200 p-4 rounded-sm bg-gray-50/30">
-						<div className="flex items-center gap-1.5 text-gray-400 mb-1">
-							<XCircleIcon size={13} className="text-red-500" />
+						<div className="flex items-center gap-1.5 text-red-400 mb-1">
+							<Ban size={13} className="text-red-500" />
 							<span className="text-[10px] font-bold uppercase tracking-wider">
 								Declined Settlements
 							</span>
@@ -614,17 +594,17 @@ export default function Dashboard() {
 
 				<hr className="border-gray-200" />
 
-				{/* METRICS INTERACTIVE SELECTION PANEL & DISTRIBUTION PIE CHART */}
+				{/* PIE CHART INTERACTIVE SECTION */}
 				<div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start pt-2">
-					{/* LEFT SIDE: SELECTION PANEL WITH PILL-SHAPED SELECTORS */}
+					{/* INTERACTIVE PILL CONFIGURATOR */}
 					<div className="lg:col-span-5 space-y-4">
 						<div>
 							<h4 className="text-xs font-black text-primary uppercase tracking-wider">
-								Select metrics to display
+								Select Metrics to Display
 							</h4>
 							<p className="text-[11px] text-gray-500 mt-0.5">
-								Click parameters below to dynamically recalibrate the corporate
-								distribution chart share.
+								Toggle tracking variables below to dynamically alter chart
+								distribution views.
 							</p>
 						</div>
 
@@ -633,7 +613,7 @@ export default function Dashboard() {
 							<button
 								type="button"
 								onClick={() => toggleMetricVisibility("found")}
-								className={`flex items-center gap-2 px-3 py-2 rounded-full border text-xs font-bold transition-all shadow-xs ${
+								className={`flex items-center gap-2 px-3 py-2 rounded-full border text-xs font-bold transition-all shadow-xs cursor-pointer ${
 									activeMetrics.found
 										? "bg-[#1E3A5F]/5 text-[#1E3A5F]"
 										: "border-gray-200 bg-white text-gray-400 hover:border-gray-300"
@@ -669,7 +649,7 @@ export default function Dashboard() {
 							<button
 								type="button"
 								onClick={() => toggleMetricVisibility("notFound")}
-								className={`flex items-center gap-2 px-3 py-2 rounded-full border text-xs font-bold transition-all shadow-xs ${
+								className={`flex items-center gap-2 px-3 py-2 rounded-full border text-xs font-bold transition-all shadow-xs cursor-pointer ${
 									activeMetrics.notFound
 										? "bg-[#2E6DA4]/5 text-[#2E6DA4]"
 										: "border-gray-200 bg-white text-gray-400 hover:border-gray-300"
@@ -705,7 +685,7 @@ export default function Dashboard() {
 							<button
 								type="button"
 								onClick={() => toggleMetricVisibility("passed")}
-								className={`flex items-center gap-2 px-3 py-2 rounded-full border text-xs font-bold transition-all shadow-xs ${
+								className={`flex items-center gap-2 px-3 py-2 rounded-full border text-xs font-bold transition-all shadow-xs cursor-pointer ${
 									activeMetrics.passed
 										? "bg-[#4A90E2]/5 text-[#4A90E2]"
 										: "border-gray-200 bg-white text-gray-400 hover:border-gray-300"
@@ -741,7 +721,7 @@ export default function Dashboard() {
 							<button
 								type="button"
 								onClick={() => toggleMetricVisibility("failed")}
-								className={`flex items-center gap-2 px-3 py-2 rounded-full border text-xs font-bold transition-all shadow-xs ${
+								className={`flex items-center gap-2 px-3 py-2 rounded-full border text-xs font-bold transition-all shadow-xs cursor-pointer ${
 									activeMetrics.failed
 										? "bg-[#e11d48]/5 text-[#e11d48]"
 										: "border-gray-200 bg-white text-gray-400 hover:border-gray-300"
@@ -777,7 +757,7 @@ export default function Dashboard() {
 							<button
 								type="button"
 								onClick={() => toggleMetricVisibility("pending")}
-								className={`flex items-center gap-2 px-3 py-2 rounded-full border text-xs font-bold transition-all shadow-xs ${
+								className={`flex items-center gap-2 px-3 py-2 rounded-full border text-xs font-bold transition-all shadow-xs cursor-pointer ${
 									activeMetrics.pending
 										? "bg-[#f59e0b]/5 text-[#f59e0b]"
 										: "border-gray-200 bg-white text-gray-400 hover:border-gray-300"
@@ -811,7 +791,7 @@ export default function Dashboard() {
 						</div>
 					</div>
 
-					{/* RIGHT SIDE: DYNAMIC COMPOSITE PIE CHART */}
+					{/* CHARTS GRAPH WORKSPACE */}
 					<div className="lg:col-span-7 border border-gray-200 p-5 rounded-sm bg-gray-50/10 flex flex-col items-center justify-center min-h-[340px]">
 						<div className="w-full text-left mb-4 flex items-center gap-2">
 							<PieIcon size={14} className="text-accent" />
@@ -861,30 +841,27 @@ export default function Dashboard() {
 							</div>
 						) : (
 							<div className="text-xs text-gray-400 font-medium text-center py-12">
-								No active metrics or non-zero variables are currently selected
-								to construct the layout composition.
+								No active metrics selected to populate distribution share.
 							</div>
 						)}
 					</div>
 				</div>
 
-				{/* HORIZONTAL RULE SEPARATION */}
 				<hr className="border-gray-200" />
 
-				{/* AI EXECUTION DEEP-DIVE TELEMETRY */}
-				<div className="space-y-4 pt-2">
+				{/* METADATA TELEMETRY CORE GRID */}
+				<div className="space-y-4 pt-1">
 					<div>
 						<h4 className="text-xs font-black text-primary uppercase tracking-wider">
 							AI Run Details
 						</h4>
 						<p className="text-[11px] text-gray-500 mt-0.5">
-							Infrastructure and resource telemetry logged during the latest
-							pipeline evaluation runtime.
+							Infrastructure resources logged during the latest evaluation
+							runtime.
 						</p>
 					</div>
 
-					<div className="grid grid-cols-1 sm:grid-cols-3 gap-y-5 gap-x-6">
-						{/* ROW 1 */}
+					<div className="grid grid-cols-2 sm:grid-cols-3 gap-y-5 gap-x-6">
 						<div className="space-y-0.5">
 							<span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">
 								Model
@@ -893,36 +870,30 @@ export default function Dashboard() {
 								Claude Sonnet 4
 							</span>
 						</div>
-
 						<div className="space-y-0.5">
 							<span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">
 								Prompt Version
 							</span>
 							<span className="text-xs font-bold text-primary">v2.1</span>
 						</div>
-
 						<div className="space-y-0.5">
 							<span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">
 								Tokens In
 							</span>
 							<span className="text-xs font-bold text-primary">42,800</span>
 						</div>
-
-						{/* ROW 2 */}
 						<div className="space-y-0.5">
 							<span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">
 								Tokens Out
 							</span>
 							<span className="text-xs font-bold text-primary">8,140</span>
 						</div>
-
 						<div className="space-y-0.5">
 							<span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">
 								Estimated Cost
 							</span>
 							<span className="text-xs font-bold text-emerald-600">$0.18</span>
 						</div>
-
 						<div className="space-y-0.5">
 							<span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">
 								Latency
@@ -933,32 +904,5 @@ export default function Dashboard() {
 				</div>
 			</div>
 		</div>
-	);
-}
-
-function XCircleIcon({
-	size,
-	className,
-}: {
-	size: number;
-	className?: string;
-}) {
-	return (
-		<svg
-			xmlns="http://www.w3.org/2000/svg"
-			width={size}
-			height={size}
-			viewBox="0 0 24 24"
-			fill="none"
-			stroke="currentColor"
-			strokeWidth="2"
-			strokeLinecap="round"
-			strokeLinejoin="round"
-			className={className}
-		>
-			<circle cx="12" cy="12" r="10" />
-			<path d="m15 9-6 6" />
-			<path d="m9 9 6 6" />
-		</svg>
 	);
 }
