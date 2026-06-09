@@ -1,6 +1,5 @@
 "use client";
-
-import { useRouter } from "next/dist/client/components/navigation";
+import { useRouter } from "next/navigation"; // Corrected import path for Next.js 14
 import type React from "react";
 import { useState } from "react";
 
@@ -16,7 +15,6 @@ export default function LoginScreen() {
 		e.preventDefault();
 		setError("");
 
-		// Email Validation
 		const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 		if (!emailRegex.test(email)) {
 			setError("Please enter a valid email address.");
@@ -26,15 +24,8 @@ export default function LoginScreen() {
 		setIsLoading(true);
 
 		try {
-			// 1. Mocking API authentication verification
 			await new Promise((resolve) => setTimeout(resolve, 700));
-
-			// 2. Set the stub cookie (Expires in 1 day)
-			// Using standard vanilla JS if you don't want to install extra npm packages:
-			// biome-ignore lint/suspicious/noDocumentCookie: PoC
 			document.cookie = `login_user_email_stub=${encodeURIComponent(email)}; path=/; max-age=86400; SameSite=Lax`;
-
-			// 3. Force a router refresh so middleware catches the new cookie, then redirect
 			router.refresh();
 			router.push("/dashboard");
 		} catch (err) {
@@ -71,7 +62,6 @@ export default function LoginScreen() {
 			{/* Right Side: Login Form */}
 			<div className="flex w-full flex-col justify-center px-6 py-12 lg:w-1/2 lg:px-16 xl:px-24 bg-white">
 				<div className="mx-auto w-full max-w-md space-y-8">
-					{/* Header */}
 					<div className="space-y-2">
 						<h2 className="text-3xl font-bold tracking-tight text-primary">
 							Welcome back
@@ -81,7 +71,6 @@ export default function LoginScreen() {
 						</p>
 					</div>
 
-					{/* Form */}
 					<form onSubmit={handleSubmit} className="space-y-6" noValidate>
 						{error && (
 							<div className="rounded-md bg-red-50 p-4 text-sm text-red-600 border border-red-200">
@@ -90,7 +79,6 @@ export default function LoginScreen() {
 						)}
 
 						<div className="space-y-4">
-							{/* Email Input */}
 							<div>
 								<label
 									htmlFor="email"
@@ -110,22 +98,13 @@ export default function LoginScreen() {
 								/>
 							</div>
 
-							{/* Password Input */}
 							<div>
-								<div className="flex items-center justify-between mb-1.5">
-									<label
-										htmlFor="password"
-										className="block text-sm font-medium text-gray-700"
-									>
-										Password
-									</label>
-									{/* <a
-										href="#"
-										className="text-xs font-semibold text-accent hover:underline"
-									>
-										Forgot password?
-									</a> */}
-								</div>
+								<label
+									htmlFor="password"
+									className="block text-sm font-medium text-gray-700 mb-1.5"
+								>
+									Password
+								</label>
 								<input
 									id="password"
 									type="password"
@@ -139,7 +118,6 @@ export default function LoginScreen() {
 							</div>
 						</div>
 
-						{/* Submit Button */}
 						<button
 							type="submit"
 							disabled={isLoading}
