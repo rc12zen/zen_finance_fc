@@ -1,9 +1,8 @@
 "use client";
 import "./globals.css";
 import {
-	AlertCircle,
 	BarChart2,
-	CheckSquare,
+	History,
 	Home,
 	LogOut,
 	Menu,
@@ -26,7 +25,7 @@ const navItems = [
 	{
 		href: "/activity-log",
 		label: "Activity Log",
-		icon: CheckSquare,
+		icon: History,
 		section: "Settings",
 	},
 	{ href: "/config", label: "Config", icon: Settings, section: "Settings" },
