@@ -298,7 +298,7 @@ export default function Dashboard() {
 						</h3>
 						<button className="w-full flex items-center justify-center gap-2 border border-dashed border-gray-300 hover:border-primary text-primary py-3.5 px-4 text-[11px] font-bold uppercase tracking-wider bg-gray-50/50 hover:bg-gray-50 transition-all cursor-pointer">
 							<UploadCloud size={14} className="text-[#4A90E2]" />
-							<span>Upload Aging Report</span>
+							<span>Upload From Local</span>
 						</button>
 					</div>
 					<div className="mt-3 pt-2 border-t border-gray-100 flex items-center justify-between text-[11px] text-gray-500">
@@ -324,7 +324,7 @@ export default function Dashboard() {
 						</h3>
 						<button className="w-full flex items-center justify-center gap-2 border border-dashed border-gray-300 hover:border-primary text-primary py-3.5 px-4 text-[11px] font-bold uppercase tracking-wider bg-gray-50/50 hover:bg-gray-50 transition-all cursor-pointer">
 							<UploadCloud size={14} className="text-[#4A90E2]" />
-							<span>Upload Account Statements</span>
+							<span>Upload From Local</span>
 						</button>
 					</div>
 					<div className="mt-3 pt-2 border-t border-gray-100 flex items-center justify-between text-[11px] text-gray-500">
@@ -375,11 +375,10 @@ export default function Dashboard() {
 				<div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 pb-4 border-b border-gray-100">
 					<div>
 						<h2 className="text-xs font-black text-primary uppercase tracking-wider">
-							Metrics Dashboard
+							Dashboard
 						</h2>
 						<p className="text-[11px] text-gray-500 mt-0.5">
-							Overall summary for the selected evaluation period and contextual
-							ledger data subsets.
+							Overall summary for the selected period and applied filters.
 						</p>
 					</div>
 
@@ -507,6 +506,9 @@ export default function Dashboard() {
 						<div className="text-xl font-black text-primary">
 							{(displayMetrics.total_rows_ingested ?? 0).toLocaleString()}
 						</div>
+						<div className="mt-2 pt-1.5 text-[10px] text-gray-400 font-medium leading-normal">
+							Transaction(s) read
+						</div>
 					</div>
 
 					<div className="border border-gray-200 p-4 rounded-sm bg-gray-50/30">
@@ -518,6 +520,9 @@ export default function Dashboard() {
 						</div>
 						<div className="text-xl font-black text-primary">
 							{(displayMetrics.found ?? 0).toLocaleString()}
+						</div>
+						<div className="mt-2 pt-1.5 text-[10px] text-gray-400 font-medium leading-normal">
+							Customer(s) and invoice(s) identified
 						</div>
 					</div>
 
@@ -531,6 +536,9 @@ export default function Dashboard() {
 						<div className="text-xl font-black text-primary">
 							{(displayMetrics.not_found ?? 0).toLocaleString()}
 						</div>
+						<div className="mt-2 pt-1.5 text-[10px] text-gray-400 font-medium leading-normal">
+							Require manual review
+						</div>
 					</div>
 
 					<div className="border border-gray-200 p-4 rounded-sm bg-gray-50/30">
@@ -542,6 +550,9 @@ export default function Dashboard() {
 						</div>
 						<div className="text-xl font-black text-primary">
 							{(displayMetrics.passed_validation ?? 0).toLocaleString()}
+						</div>
+						<div className="mt-2 pt-1.5 text-[10px] text-gray-400 font-medium leading-normal">
+							Amount and currency match
 						</div>
 					</div>
 
@@ -555,6 +566,9 @@ export default function Dashboard() {
 						<div className="text-xl font-black text-primary">
 							{(displayMetrics.failed_validation ?? 0).toLocaleString()}
 						</div>
+						<div className="mt-2 pt-1.5 text-[10px] text-gray-400 font-medium leading-normal">
+							Amount and currency mismatch
+						</div>
 					</div>
 
 					<div className="border border-gray-200 p-4 rounded-sm bg-gray-50/30">
@@ -566,6 +580,9 @@ export default function Dashboard() {
 						</div>
 						<div className="text-xl font-black text-primary">
 							{(displayMetrics.pending_hitl ?? 0).toLocaleString()}
+						</div>
+						<div className="mt-2 pt-1.5 text-[10px] text-gray-400 font-medium leading-normal">
+							Awaiting SPOC review
 						</div>
 					</div>
 
@@ -579,6 +596,9 @@ export default function Dashboard() {
 						<div className="text-xl font-black text-primary">
 							{(displayMetrics.approved ?? 0).toLocaleString()}
 						</div>
+						<div className="mt-2 pt-1.5 text-[10px] text-gray-400 font-medium leading-normal">
+							Posted to Oracle Fusion
+						</div>
 					</div>
 
 					<div className="border border-gray-200 p-4 rounded-sm bg-gray-50/30">
@@ -590,6 +610,9 @@ export default function Dashboard() {
 						</div>
 						<div className="text-xl font-black text-primary">
 							{(displayMetrics.rejected ?? 0).toLocaleString()}
+						</div>
+						<div className="mt-2 pt-1.5 text-[10px] text-gray-400 font-medium leading-normal">
+							Rejected by SPOC
 						</div>
 					</div>
 				</div>

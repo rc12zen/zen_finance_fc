@@ -15,7 +15,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
 const navItems = [
-	{ href: "/dashboard", label: "Dashboard", icon: Home },
+	{ href: "/home", label: "Home", icon: Home },
 	{ href: "/results", label: "Matched Results", icon: BarChart2 },
 	{ href: "/not-found-bucket", label: "Not Found", icon: AlertCircle },
 	{ href: "/hitl", label: "HITL Approval", icon: CheckSquare },
@@ -86,11 +86,11 @@ export default function RootLayout({
 								</button>
 								<div className="flex items-center gap-3">
 									<div className="leading-tight border-r border-[#2E6DA4]/40 pr-4">
-										<div className="text-[9px] text-[#4A90E2] font-black uppercase tracking-widest">
-											Zensar
-										</div>
 										<div className="text-xs font-black uppercase tracking-tight whitespace-nowrap">
-											BR Processing
+											Cash Apply
+										</div>
+										<div className="text-[9px] text-[#4A90E2] font-black uppercase tracking-widest">
+											From bank statement to Fusion - in seconds
 										</div>
 									</div>
 									<h1 className="text-xs font-black uppercase tracking-wider text-white pl-1 hidden sm:block">

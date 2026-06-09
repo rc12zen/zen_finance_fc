@@ -33,7 +33,7 @@ export default function LoginScreen() {
 			await new Promise((resolve) => setTimeout(resolve, 700));
 			document.cookie = `login_user_email_stub=${encodeURIComponent(email)}; path=/; max-age=86400; SameSite=Lax`;
 			router.refresh();
-			router.push("/dashboard");
+			router.push("/home");
 		} catch (err) {
 			setError("Invalid credentials. Please try again.");
 		} finally {
