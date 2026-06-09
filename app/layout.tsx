@@ -66,33 +66,34 @@ export default function RootLayout({
 	};
 
 	return (
-		<html lang="en">
-			<body className="antialiased text-gray-800 bg-gray-50">
+		<html lang="en" className="h-full">
+			<body className="antialiased text-gray-800 bg-gray-50 h-full overflow-hidden">
 				{isLoginPage ? (
 					// On the login page, render children directly without header or sidebar
 					children
 				) : (
 					// On authenticated dashboard views, mount global frame architecture
-					<div className="flex flex-col min-h-screen">
-						<header className="h-16 bg-primary text-white px-6 flex items-center justify-between sticky top-0 z-30 shadow-md border-b border-accent">
+					<div className="flex flex-col h-screen w-screen overflow-hidden">
+						{/* GLOBAL FIXED TOP BAR */}
+						<header className="h-16 bg-[#1E3A5F] text-white px-6 flex items-center justify-between sticky top-0 z-30 shadow-xs border-b border-[#172e4c] shrink-0">
 							<div className="flex items-center gap-4">
 								<button
 									onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-									className="p-1.5 rounded-md hover:bg-accent transition-colors focus:outline-none"
+									className="p-1.5 rounded-sm hover:bg-[#2E6DA4]/30 transition-colors focus:outline-none cursor-pointer"
 									aria-label="Toggle Sidebar"
 								>
-									<Menu size={20} />
+									<Menu size={18} />
 								</button>
 								<div className="flex items-center gap-3">
-									<div className="leading-tight border-r border-accent/40 pr-4">
-										<div className="text-[10px] text-blue-300 font-medium uppercase tracking-wider">
+									<div className="leading-tight border-r border-[#2E6DA4]/40 pr-4">
+										<div className="text-[9px] text-[#4A90E2] font-black uppercase tracking-widest">
 											Zensar
 										</div>
-										<div className="text-xs font-bold whitespace-nowrap">
+										<div className="text-xs font-black uppercase tracking-tight whitespace-nowrap">
 											BR Processing
 										</div>
 									</div>
-									<h1 className="text-base font-semibold text-white tracking-wide pl-1">
+									<h1 className="text-xs font-black uppercase tracking-wider text-white pl-1 hidden sm:block">
 										{getPageTitle()}
 									</h1>
 								</div>
@@ -100,29 +101,32 @@ export default function RootLayout({
 
 							<div className="flex items-center gap-4">
 								<div className="text-right hidden sm:block">
-									<p className="text-xs font-semibold text-white capitalize">
+									<p className="text-xs font-bold text-white capitalize">
 										{userIdentifier}
 									</p>
-									<p className="text-[10px] text-blue-300">{userEmail}</p>
+									<p className="text-[10px] text-gray-400 font-mono">
+										{userEmail}
+									</p>
 								</div>
-								<div className="h-8 w-8 rounded-full bg-accent text-white flex items-center justify-center border border-blue-400/30">
-									<User size={15} />
+								<div className="h-8 w-8 rounded-full bg-[#2E6DA4]/20 text-white flex items-center justify-center border border-[#4A90E2]/20">
+									<User size={14} />
 								</div>
-								<hr className="w-px h-6 bg-accent/40" />
+								<hr className="w-px h-6 bg-[#2E6DA4]/30" />
 								<Link
 									href="/"
 									onClick={handleSignOut}
-									className="text-blue-300 hover:text-red-400 transition-colors p-1 rounded-md hover:bg-accent/40"
+									className="text-gray-400 hover:text-[#e11d48] transition-colors p-1.5 rounded-sm hover:bg-[#e11d48]/5"
 									title="Sign Out"
 								>
-									<LogOut size={18} />
+									<LogOut size={16} />
 								</Link>
 							</div>
 						</header>
 
-						<div className="flex flex-1 relative">
+						<div className="flex flex-1 h-[calc(100vh-64px)] relative overflow-hidden">
+							{/* FIXED NAVIGATION PANEL */}
 							<aside
-								className={`bg-white border-r border-gray-200 flex flex-col fixed left-0 bottom-0 top-16 z-20 transition-all duration-300 ease-in-out ${
+								className={`bg-white border-r border-gray-200 flex flex-col fixed left-0 bottom-0 top-16 z-20 transition-all duration-300 ease-in-out shrink-0 ${
 									isSidebarOpen ? "w-60" : "w-16"
 								}`}
 							>
@@ -134,14 +138,17 @@ export default function RootLayout({
 												key={href}
 												href={href}
 												title={!isSidebarOpen ? label : undefined}
-												className={`flex items-center gap-3 mx-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200 ${
+												className={`flex items-center gap-3 mx-3 px-3 py-2.5 rounded-sm text-xs font-bold uppercase tracking-wider transition-all duration-150 ${
 													active
-														? "bg-accent text-white font-medium shadow-sm"
-														: "text-gray-600 hover:bg-gray-100 hover:text-primary"
+														? "bg-[#1E3A5F] text-white shadow-xs"
+														: "text-gray-500 hover:bg-gray-100 hover:text-primary"
 												}`}
 											>
 												<div className="flex-shrink-0">
-													<Icon size={18} />
+													<Icon
+														size={16}
+														className={active ? "text-[#4A90E2]" : ""}
+													/>
 												</div>
 												<span
 													className={`whitespace-nowrap transition-opacity duration-200 ${isSidebarOpen ? "opacity-100" : "opacity-0 pointer-events-none hidden"}`}
@@ -153,15 +160,17 @@ export default function RootLayout({
 									})}
 								</nav>
 								<div
-									className={`p-4 text-[11px] text-gray-400 border-t border-gray-100 whitespace-nowrap overflow-hidden transition-all duration-200 ${isSidebarOpen ? "opacity-100" : "opacity-0 w-0 h-0 p-0 pointer-events-none"}`}
+									className={`p-4 text-[10px] font-bold uppercase tracking-widest text-gray-400 border-t border-gray-100 whitespace-nowrap overflow-hidden transition-all duration-200 ${isSidebarOpen ? "opacity-100" : "opacity-0 w-0 h-0 p-0 pointer-events-none"}`}
 								>
 									Internal Use Only
 								</div>
 							</aside>
 
-							{/* Standard structural parent container for child routes */}
+							{/* ISOLATED COMPOSITE VIEWPORT FOR INLINE PAGE COMPONENT LAYER SCROLLING */}
 							<main
-								className={`flex-1 p-8 min-h-screen transition-all duration-300 ease-in-out ${isSidebarOpen ? "ml-60" : "ml-16"}`}
+								className={`flex-1 p-8 h-full overflow-y-auto transition-all duration-300 ease-in-out ${
+									isSidebarOpen ? "ml-60" : "ml-16"
+								}`}
 							>
 								{children}
 							</main>
