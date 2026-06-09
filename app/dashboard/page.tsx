@@ -328,7 +328,9 @@ export default function Dashboard() {
 						</button>
 					</div>
 					<div className="mt-3 pt-2 border-t border-gray-100 flex items-center justify-between text-[11px] text-gray-500">
-						<span>Multiple XLS, CSV uploads supported. Max 10 MB per file.</span>
+						<span>
+							Multiple XLS, CSV uploads supported. Max 10 MB per file.
+						</span>
 						<span className="text-primary font-bold">
 							{files.length} statements loaded
 						</span>
@@ -336,7 +338,7 @@ export default function Dashboard() {
 				</div>
 			</div>
 
-			{/* RECONCILIATION ENGINE CONTROL BAR */}
+			{/* RECONCILIATION ENGINE CONTROL BAR - DYNAMIC STATUS STRIP */}
 			<div className="bg-[#1E3A5F] text-white px-5 py-4 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4 border border-[#172e4c]">
 				<div className="flex items-center gap-3">
 					<RefreshCw
@@ -344,11 +346,14 @@ export default function Dashboard() {
 						className={`text-[#4A90E2] ${isRunning ? "animate-spin" : ""}`}
 					/>
 					<div className="text-xs font-medium text-gray-200">
-						<span>Status</span>
-						<span className="text-gray-400 px-1.5">|</span>
-						<span className="text-white font-bold tracking-wide">
-							{getSystemStatusLabel()}
-						</span>
+						{agingStatus.loaded && files.length > 0 ? (
+							<span className="text-white font-bold tracking-wide">Ready.</span>
+						) : (
+							<span className="text-gray-300">
+								Upload an ageing report and at least one account statement to
+								begin.
+							</span>
+						)}
 					</div>
 				</div>
 				<button
@@ -356,10 +361,10 @@ export default function Dashboard() {
 					disabled={
 						isRunning || loading || files.length === 0 || !agingStatus.loaded
 					}
-					className="w-full sm:w-auto flex items-center justify-center gap-2 bg-[#4A90E2] hover:bg-[#357ABD] text-white px-6 py-2.5 font-bold text-xs uppercase tracking-widest transition-all disabled:opacity-20 disabled:cursor-not-allowed shadow-xs whitespace-nowrap rounded-sm"
+					className="w-full sm:w-auto flex items-center justify-center gap-2 bg-[#4A90E2] hover:bg-[#357ABD] text-white px-6 py-2.5 font-bold text-xs uppercase tracking-widest transition-all disabled:opacity-20 disabled:cursor-not-allowed shadow-xs whitespace-nowrap rounded-sm cursor-pointer"
 				>
 					<Play size={11} className="fill-current" />
-					<span>Start Matching Process</span>
+					<span>Start Analysis</span>
 					<ArrowRight size={12} className="ml-0.5" />
 				</button>
 			</div>
