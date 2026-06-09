@@ -189,7 +189,7 @@ export default function RootLayout({
 								<div
 									className={`p-4 text-[10px] font-bold uppercase tracking-widest text-gray-400 border-t border-gray-100 whitespace-nowrap overflow-hidden transition-all duration-200 ${isSidebarOpen ? "opacity-100" : "opacity-0 w-0 h-0 p-0 pointer-events-none"}`}
 								>
-									Internal Use Only shadow-xs
+									Internal Use Only
 								</div>
 							</aside>
 
