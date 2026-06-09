@@ -483,7 +483,7 @@ export default function AnalysisHistoryPage() {
 												className="inline-flex items-center gap-1 bg-[#1E3A5F] hover:bg-[#2E6DA4] text-white px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-xs shadow-xs transition-colors cursor-pointer"
 											>
 												<Eye size={11} />
-												<span>Inspect</span>
+												<span>View</span>
 											</button>
 										</td>
 									</tr>

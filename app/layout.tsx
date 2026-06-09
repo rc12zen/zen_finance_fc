@@ -15,11 +15,21 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
 const navItems = [
-	{ href: "/home", label: "Home", icon: Home },
-	{ href: "/analysis-history", label: "Analysis History", icon: BarChart2 },
-	// { href: "/not-found-bucket", label: "Not Found", icon: AlertCircle },
-	{ href: "/hitl", label: "HITL Approval", icon: CheckSquare },
-	{ href: "/config", label: "Config", icon: Settings },
+	{ href: "/home", label: "Home", icon: Home, section: "Main" },
+	{
+		href: "/analysis-history",
+		label: "Analysis History",
+		icon: BarChart2,
+		section: "Main",
+	},
+	//
+	{
+		href: "/hitl",
+		label: "HITL Approval",
+		icon: CheckSquare,
+		section: "Settings",
+	},
+	{ href: "/config", label: "Config", icon: Settings, section: "Settings" },
 ];
 
 export default function RootLayout({
@@ -69,10 +79,8 @@ export default function RootLayout({
 		<html lang="en" className="h-full">
 			<body className="antialiased text-gray-800 bg-gray-50 h-full overflow-hidden">
 				{isLoginPage ? (
-					// On the login page, render children directly without header or sidebar
 					children
 				) : (
-					// On authenticated dashboard views, mount global frame architecture
 					<div className="flex flex-col h-screen w-screen overflow-hidden">
 						{/* GLOBAL FIXED TOP BAR */}
 						<header className="h-16 bg-[#1E3A5F] text-white px-6 flex items-center justify-between sticky top-0 z-30 shadow-xs border-b border-[#172e4c] shrink-0">
@@ -130,39 +138,59 @@ export default function RootLayout({
 									isSidebarOpen ? "w-60" : "w-16"
 								}`}
 							>
-								<nav className="flex-1 py-4 space-y-1">
-									{navItems.map(({ href, label, icon: Icon }) => {
-										const active = pathname === href;
-										return (
-											<Link
-												key={href}
-												href={href}
-												title={!isSidebarOpen ? label : undefined}
-												className={`flex items-center gap-3 mx-3 px-3 py-2.5 rounded-sm text-xs font-bold uppercase tracking-wider transition-all duration-150 ${
-													active
-														? "bg-[#1E3A5F] text-white shadow-xs"
-														: "text-gray-500 hover:bg-gray-100 hover:text-primary"
-												}`}
-											>
-												<div className="flex-shrink-0">
-													<Icon
-														size={16}
-														className={active ? "text-[#4A90E2]" : ""}
-													/>
+								<nav className="flex-1 py-3 space-y-1.5 overflow-y-auto overflow-x-hidden">
+									{navItems.map(
+										({ href, label, icon: Icon, section }, index) => {
+											const active = pathname === href;
+
+											// Determine if this item is the start of a new visual section group
+											const showSectionHeader =
+												index === 0 || navItems[index - 1].section !== section;
+
+											return (
+												<div key={href} className="space-y-0.5">
+													{showSectionHeader && (
+														<div
+															className={`px-6 text-[9px] font-black tracking-wider text-gray-400 uppercase transition-all duration-200 pt-3 pb-1 block h-7 truncate ${
+																isSidebarOpen
+																	? "opacity-100 pl-6"
+																	: "opacity-0 h-0 pt-0 pb-0 pointer-events-none"
+															}`}
+														>
+															{section}
+														</div>
+													)}
+
+													<Link
+														href={href}
+														title={!isSidebarOpen ? label : undefined}
+														className={`flex items-center gap-3 w-full px-6 py-2 text-xs font-bold uppercase tracking-wider transition-all duration-150 ${
+															active
+																? "bg-[#1E3A5F] text-white border-l-4 border-[#4A90E2] pl-5"
+																: "text-gray-500 hover:bg-gray-50 hover:text-primary pl-6"
+														}`}
+													>
+														<div className="flex-shrink-0">
+															<Icon
+																size={16}
+																className={active ? "text-[#4A90E2]" : ""}
+															/>
+														</div>
+														<span
+															className={`whitespace-nowrap transition-opacity duration-200 ${isSidebarOpen ? "opacity-100" : "opacity-0 pointer-events-none hidden"}`}
+														>
+															{label}
+														</span>
+													</Link>
 												</div>
-												<span
-													className={`whitespace-nowrap transition-opacity duration-200 ${isSidebarOpen ? "opacity-100" : "opacity-0 pointer-events-none hidden"}`}
-												>
-													{label}
-												</span>
-											</Link>
-										);
-									})}
+											);
+										},
+									)}
 								</nav>
 								<div
 									className={`p-4 text-[10px] font-bold uppercase tracking-widest text-gray-400 border-t border-gray-100 whitespace-nowrap overflow-hidden transition-all duration-200 ${isSidebarOpen ? "opacity-100" : "opacity-0 w-0 h-0 p-0 pointer-events-none"}`}
 								>
-									Internal Use Only
+									Internal Use Only shadow-xs
 								</div>
 							</aside>
 
