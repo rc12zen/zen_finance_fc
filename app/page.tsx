@@ -1,15 +1,21 @@
 "use client";
-import { useRouter } from "next/navigation"; // Corrected import path for Next.js 14
+import {
+	AlertTriangle,
+	ArrowRight,
+	Lock,
+	Mail,
+	ShieldCheck,
+} from "lucide-react";
+import { useRouter } from "next/navigation";
 import type React from "react";
 import { useState } from "react";
 
 export default function LoginScreen() {
 	const router = useRouter();
-
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
-	const [error, setError] = useState("");
 	const [isLoading, setIsLoading] = useState(false);
+	const [error, setError] = useState("");
 
 	const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
@@ -36,96 +42,101 @@ export default function LoginScreen() {
 	};
 
 	return (
-		<div className="flex min-h-screen w-full bg-gray-50">
-			{/* Left Side: Banner Image & Branding */}
-			<div className="relative hidden w-1/2 bg-primary lg:block">
-				<div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1964&auto=format&fit=crop')] bg-cover bg-center mix-blend-overlay opacity-40" />
-				<div className="relative flex h-full flex-col justify-between p-12 text-white">
-					<div className="flex items-center gap-2 font-semibold tracking-wide text-xl">
-						<div className="h-6 w-6 rounded-md bg-accent" />
-						<span>Zensar</span>
+		<div className="min-h-screen w-full flex items-center justify-center bg-gray-50 px-4">
+			{/* CENTRAL CORE CONTAINER */}
+			<div className="w-full max-w-md bg-white border border-gray-200 p-8 shadow-sm flex flex-col justify-between min-h-[550px]">
+				{/* BRAND HEADER SEGMENT */}
+				<div className="text-center space-y-2.5">
+					{/* (logo) */}
+					<div className="inline-flex items-center justify-center h-12 w-12 rounded-sm bg-[#1E3A5F] text-white shadow-sm">
+						<ShieldCheck size={26} className="text-[#4A90E2]" />
 					</div>
-					<div className="space-y-4">
-						<h1 className="text-4xl font-bold leading-tight xl:text-5xl">
-							Leveraging financial management <br />
-							with AI.
-						</h1>
-						<p className="text-gray-300 max-w-md">
-							Welcome to a new experience of handling financial documents. Easy,
-							blazing fast, automated.
-						</p>
-					</div>
-					<p className="text-sm text-gray-400">Internal Use Only</p>
+
+					{/* (title) */}
+					<h1 className="text-xl font-black tracking-tight text-[#1E3A5F] uppercase">
+						Cash Apply
+					</h1>
+
+					{/* (catchphrase) */}
+					<p className="text-xs text-gray-500 font-medium max-w-[280px] mx-auto leading-relaxed">
+						From bank statement to Fusion in seconds.
+					</p>
 				</div>
-			</div>
 
-			{/* Right Side: Login Form */}
-			<div className="flex w-full flex-col justify-center px-6 py-12 lg:w-1/2 lg:px-16 xl:px-24 bg-white">
-				<div className="mx-auto w-full max-w-md space-y-8">
-					<div className="space-y-2">
-						<h2 className="text-3xl font-bold tracking-tight text-primary">
-							Welcome back
-						</h2>
-						<p className="text-sm text-gray-500">
-							Please enter your details to sign in to your account.
-						</p>
+				{/* ERROR PIPELINE FEEDBACK */}
+				{error && (
+					<div className="bg-red-50 border-l-2 border-red-600 p-3 mt-4 text-xs flex items-center gap-2.5 text-gray-900 transition-all">
+						<AlertTriangle size={14} className="text-red-600 shrink-0" />
+						<span className="font-medium">{error}</span>
+					</div>
+				)}
+
+				{/* INPUT INTERACTION SEGMENT */}
+				<form onSubmit={handleSubmit} className="space-y-4 my-auto pt-4">
+					{/* username / email */}
+					<div className="space-y-1">
+						<label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest block">
+							Username
+						</label>
+						<div className="relative">
+							<span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+								<Mail size={14} />
+							</span>
+							<input
+								type="text"
+								required
+								value={email}
+								onChange={(e) => setEmail(e.target.value)}
+								placeholder="identity@zensar.com"
+								disabled={isLoading}
+								className="w-full bg-white border border-gray-300 focus:border-[#4A90E2] pl-9 pr-3 py-2 text-xs font-medium text-gray-900 placeholder-gray-400 focus:outline-none transition-colors disabled:opacity-60"
+							/>
+						</div>
 					</div>
 
-					<form onSubmit={handleSubmit} className="space-y-6" noValidate>
-						{error && (
-							<div className="rounded-md bg-red-50 p-4 text-sm text-red-600 border border-red-200">
-								{error}
-							</div>
-						)}
-
-						<div className="space-y-4">
-							<div>
-								<label
-									htmlFor="email"
-									className="block text-sm font-medium text-gray-700 mb-1.5"
-								>
-									Email Address
-								</label>
-								<input
-									id="email"
-									type="email"
-									autoComplete="email"
-									value={email}
-									onChange={(e) => setEmail(e.target.value)}
-									className="w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400 focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent sm:text-sm"
-									placeholder="you@example.com"
-									required
-								/>
-							</div>
-
-							<div>
-								<label
-									htmlFor="password"
-									className="block text-sm font-medium text-gray-700 mb-1.5"
-								>
-									Password
-								</label>
-								<input
-									id="password"
-									type="password"
-									autoComplete="current-password"
-									value={password}
-									onChange={(e) => setPassword(e.target.value)}
-									className="w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400 focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent sm:text-sm"
-									placeholder="••••••••"
-									required
-								/>
-							</div>
+					{/* password */}
+					<div className="space-y-1">
+						<label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest block">
+							Password
+						</label>
+						<div className="relative">
+							<span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+								<Lock size={14} />
+							</span>
+							<input
+								type="password"
+								required
+								value={password}
+								onChange={(e) => setPassword(e.target.value)}
+								placeholder="••••••••••••"
+								disabled={isLoading}
+								className="w-full bg-white border border-gray-300 focus:border-[#4A90E2] pl-9 pr-3 py-2 text-xs font-medium text-gray-900 placeholder-gray-400 focus:outline-none transition-colors disabled:opacity-60"
+							/>
 						</div>
+					</div>
 
-						<button
-							type="submit"
-							disabled={isLoading}
-							className="flex w-full justify-center rounded-md bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-50 transition-colors"
-						>
-							{isLoading ? "Signing in..." : "Sign in"}
-						</button>
-					</form>
+					{/* (button) */}
+					<button
+						type="submit"
+						disabled={isLoading}
+						className="w-full flex items-center justify-center gap-2 bg-[#1E3A5F] hover:bg-[#2E6DA4] text-white py-2.5 font-bold text-xs uppercase tracking-widest transition-all shadow-sm group disabled:opacity-50 mt-2"
+					>
+						{isLoading ? "Authenticating..." : "Sign In"}
+						{!isLoading && (
+							<ArrowRight
+								size={12}
+								className="opacity-70 group-hover:translate-x-0.5 transition-transform"
+							/>
+						)}
+					</button>
+				</form>
+
+				{/* FOOTER SEGMENT */}
+				{/* (copyright info) */}
+				<div className="pt-6 border-t border-gray-100 text-center">
+					<p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
+						&copy; Zensar Technologies • For Internal Use Only • PoC v1.0
+					</p>
 				</div>
 			</div>
 		</div>
