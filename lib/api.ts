@@ -40,7 +40,12 @@ export const getRunHistory = (
 }
 
 // GET /api/run/history/{run_id}  — single run detail
-export const getRunDetail = (runId: number) => API.get(`/api/run/history/${runId}`)
+export const getRunDetail   = (runId: number) => API.get(`/api/run/history/${runId}`)
+// GET /api/results/run-summary/{run_id}
+// Returns metrics + tab rows (matched/not_found/review_approve/processed)
+export const getRunSummary  = (runId: number) => API.get(`/api/results/run-summary/${runId}`)
+// GET /api/results/row-detail/{record_id} — full analysis for one row
+export const getRowDetail   = (recordId: number) => API.get(`/api/results/row-detail/${recordId}`)
 
 // ── Results ───────────────────────────────────────────────────────────────────
 // GET /api/results/metrics?run_id=X   — pass run_id to scope to one run
