@@ -59,7 +59,8 @@ interface RowDetail {
 	id: number;
 	bank_info: {
 		bank_name: string; statement_date: string; narrative: string;
-		bank_account_number: string; credit_amount: number; currency: string;
+		bank_account_number: string; bank_reference: string;
+		credit_amount: number; currency: string;
 	};
 	extraction: {
 		method: string; confidence_score: number;
@@ -335,11 +336,13 @@ export default function RowDetailPage() {
 							<FileText size={13} className="text-[#2E6DA4]" /> Bank Statement
 						</h3>
 						<div className="bg-gray-50 border border-gray-200 rounded-sm px-4 py-1">
-							<InfoRow label="Bank"          value={detail.bank_info.bank_name} />
-							<InfoRow label="Date"          value={detail.bank_info.statement_date} mono />
-							<InfoRow label="Account"       value={detail.bank_info.bank_account_number} mono />
-							<InfoRow label="Credit Amount" value={`${Number(detail.bank_info.credit_amount || 0).toLocaleString(undefined,{minimumFractionDigits:2})} ${detail.bank_info.currency}`} mono />
-							<InfoRow label="Narrative"     value={detail.bank_info.narrative} />
+							<InfoRow label="Bank"           value={detail.bank_info.bank_name} />
+							<InfoRow label="Statement Date" value={detail.bank_info.statement_date} mono />
+							<InfoRow label="Account No."    value={detail.bank_info.bank_account_number} mono />
+							<InfoRow label="Reference No."  value={detail.bank_info.bank_reference || "—"} mono />
+							<InfoRow label="Credit Amount"  value={`${Number(detail.bank_info.credit_amount || 0).toLocaleString(undefined,{minimumFractionDigits:2})} ${detail.bank_info.currency}`} mono />
+							<InfoRow label="Currency"       value={detail.bank_info.currency} />
+							<InfoRow label="Narrative"      value={detail.bank_info.narrative} />
 						</div>
 					</section>
 

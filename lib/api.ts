@@ -10,6 +10,10 @@ export const resetRun        = ()                        => API.post("/api/run/r
 
 // Upload handlers
 // POST /api/run/upload           — bank statement (multipart)
+// DELETE /api/run/files/{filename} — remove a statement from the active queue
+export const deleteFile = (filename: string) =>
+  API.delete(`/api/run/files/${encodeURIComponent(filename)}`)
+
 export const uploadStatement = (file: File) => {
   const form = new FormData()
   form.append("file", file)

@@ -19,6 +19,7 @@ import {
 	Sparkles,
 	UploadCloud,
 	User,
+	X,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -40,6 +41,7 @@ import {
 	uploadAgingReport,
 	uploadStatement,
 	getFilterOptions,
+	deleteFile,
 } from "@/lib/api";
 
 interface FileInfo {
@@ -157,7 +159,9 @@ export default function Dashboard() {
 			let dateTo:   string | undefined = undefined;
 
 			if (period === "Last Analysis") {
-				const histRes = await getRunHistory(1, 1);
+				// Fetch up to 10 recent runs to find the latest COMPLETED one
+				// (the most recent run may have errored — skip those)
+				const histRes = await getRunHistory(1, 10);
 				const latest  = (histRes.data.data || []).find(
 					(r: any) => r.status === "completed",
 				);
@@ -286,6 +290,13 @@ export default function Dashboard() {
 		}
 	};
 
+	const handleRemoveFile = async (filename: string) => {
+		try {
+			await deleteFile(filename);
+			await fetchFiles();
+		} catch {}
+	};
+
 	const handleTimePeriodSelect = (period: string) => {
 		setTimePeriod(period);          // triggers useEffect → doFetchMetrics
 		setIsCustomDateActive(period === "Custom Date");
@@ -374,10 +385,11 @@ export default function Dashboard() {
 						</button>
 					</div>
 					<div className="mt-3 pt-2 border-t border-gray-100 flex items-center justify-between text-[11px] text-gray-500">
-						<span>Single XLS, CSV upload supported. Max 10 MB.</span>
-						{agingStatus.loaded ? (
-							<span className="text-[#4A90E2] font-bold flex items-center gap-1">
-								<CheckCircle2 size={12} /> {agingStatus.row_count.toLocaleString()} rows active
+						<span>Single XLS, CSV. Max 10 MB.</span>
+						{agingStatus.loaded && agingStatus.filename ? (
+							<span className="text-[#4A90E2] font-bold flex items-center gap-1.5 max-w-[180px]">
+								<CheckCircle2 size={11} className="shrink-0" />
+								<span className="truncate font-mono text-[10px]" title={agingStatus.filename}>{agingStatus.filename}</span>
 							</span>
 						) : (
 							<span className="text-amber-600 font-medium">No file uploaded</span>
@@ -408,10 +420,28 @@ export default function Dashboard() {
 							<span>{statementUploading ? "Uploading…" : "Upload From Local"}</span>
 						</button>
 					</div>
-					<div className="mt-3 pt-2 border-t border-gray-100 flex items-center justify-between text-[11px] text-gray-500">
-						<span>Multiple XLS, CSV uploads supported. Max 10 MB per file.</span>
-						<span className="text-primary font-bold">{files.length} statements loaded</span>
-					</div>
+					{/* Uploaded file list with remove */}
+					{files.length > 0 ? (
+						<div className="mt-3 pt-2 border-t border-gray-100 space-y-1.5 max-h-[120px] overflow-y-auto">
+							{files.map((f) => (
+								<div key={f.filename} className="flex items-center justify-between text-[11px] bg-gray-50 border border-gray-200 rounded-xs px-2 py-1.5 gap-2">
+									<div className="flex items-center gap-1.5 min-w-0">
+										<FileText size={11} className="text-gray-400 shrink-0" />
+										<span className="font-mono font-bold text-primary truncate text-[10px]" title={f.filename}>{f.filename}</span>
+										<span className="text-gray-400 shrink-0 text-[10px]">{f.bank_name} · {f.size_mb}MB</span>
+									</div>
+									<button onClick={() => handleRemoveFile(f.filename)}
+										className="text-gray-400 hover:text-red-500 transition-colors cursor-pointer shrink-0" title="Remove">
+										<X size={11} />
+									</button>
+								</div>
+							))}
+						</div>
+					) : (
+						<div className="mt-3 pt-2 border-t border-gray-100 text-[11px] text-gray-400">
+							Upload XLS / CSV files. Max 10 MB each.
+						</div>
+					)}
 				</div>
 			</div>
 
