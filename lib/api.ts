@@ -71,7 +71,7 @@ export const getValidationFailures = ()               => API.get("/api/results/v
 // ── HITL ──────────────────────────────────────────────────────────────────────
 export const getPendingHitl     = ()                              => API.get("/api/hitl/pending")
 export const getApprovalPreview = (id: number)                    => API.get(`/api/hitl/preview/${id}`)
-export const approveEntry       = (id: number, comment?: string)  => API.post(`/api/hitl/approve/${id}`, { comment })
+//export const approveEntry       = (id: number, comment?: string)  => API.post(`/api/hitl/approve/${id}`, { comment })
 export const rejectEntry        = (id: number, comment?: string)  => API.post(`/api/hitl/reject/${id}`,  { comment })
 export const approveBulk        = (ids: number[])                 => API.post("/api/hitl/approve-bulk",  { ids })
 export const getHitlHistory     = ()                              => API.get("/api/hitl/history")
@@ -88,3 +88,40 @@ export const refreshAging         = ()                      => API.post("/api/co
 // Returns { banks: string[], business_units: string[], users: string[] }
 export const getFilterOptions = (runId?: number) =>
   API.get("/api/filters/options", { params: runId ? { run_id: runId } : {} })
+
+
+
+export const getFilePreview = (
+  filename: string,
+  bucket:   string = "active",
+  maxRows:  number = 200,
+) =>
+  API.get(`/api/run/file-preview/${encodeURIComponent(filename)}`, {
+    params: { bucket, max_rows: maxRows },
+  })
+
+// POST /api/hitl/retry-oracle/{id}
+// Retry Oracle POST for a failed approved row
+// Returns { message, transaction_ref, oracle_post_status, oracle_post_message, payload }
+export const retryOracle = (id: number) =>
+  API.post(`/api/hitl/retry-oracle/${id}`)
+
+
+
+// GET /api/hitl/breakup-analysis/{id}
+// Returns { needs_breakup, reason, invoices, credit_amount, tds_pct, auto_approved, breakup_source }
+export const getBreakupAnalysis = (id: number) =>
+  API.get(`/api/hitl/breakup-analysis/${id}`)
+
+
+// UPDATE approveEntry to accept invoice_breakup
+// Replace the existing approveEntry line with:
+export const approveEntry = (
+  id:             number,
+  comment?:       string,
+  invoiceBreakup?: { invoice_number: string; reference_amount: number }[],
+) =>
+  API.post(`/api/hitl/approve/${id}`, {
+    comment,
+    invoice_breakup: invoiceBreakup,
+  })

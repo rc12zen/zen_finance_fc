@@ -68,11 +68,11 @@ interface Metrics {
 }
 
 const METRIC_CONFIG = {
-	found:    { name: "Found",              color: "#1E3A5F" },
-	notFound: { name: "Not Found",          color: "#2E6DA4" },
-	passed:   { name: "Passed Validation",  color: "#4A90E2" },
-	failed:   { name: "Failed Validation",  color: "#e11d48" },
-	pending:  { name: "Pending Approval",       color: "#f59e0b" },
+	found:    { name: "Found",             color: "#1E3A5F" },
+	notFound: { name: "Not found",         color: "#2E6DA4" },
+	passed:   { name: "Passed validation", color: "#4A90E2" },
+	failed:   { name: "Failed validation", color: "#e11d48" },
+	pending:  { name: "Pending approval",  color: "#f59e0b" },
 };
 
 export default function Dashboard() {
@@ -109,6 +109,8 @@ export default function Dashboard() {
 	});
 
 	const [userDisplayName, setUserDisplayName] = useState("Admin User");
+	const [aiPanelVisible, setAiPanelVisible] = useState(true);
+	const [successMessage, setSuccessMessage] = useState("");
 
 	// ── Data fetchers ──────────────────────────────────────────────────────────
 
@@ -233,6 +235,11 @@ export default function Dashboard() {
 
 	// ── Handlers ───────────────────────────────────────────────────────────────
 
+	const showSuccess = (msg: string) => {
+		setSuccessMessage(msg);
+		setTimeout(() => setSuccessMessage(""), 4000);
+	};
+
 	const handleStart = async () => {
 		if (!agingStatus.loaded) {
 			setError("Required validation context missing: Please load aging ledger data first.");
@@ -264,6 +271,7 @@ export default function Dashboard() {
 			await refreshAging();
 			await doFetchMetrics(timePeriod, customStartDate, customEndDate); // refresh
 			await fetchFilterOptions();  // BU options may change after new aging
+			showSuccess(`Aging report "${file.name}" uploaded successfully.`);
 		} catch (err: any) {
 			setError(err?.response?.data?.detail || "Aging report upload failed.");
 		} finally {
@@ -282,6 +290,7 @@ export default function Dashboard() {
 			await uploadStatement(file);
 			await fetchFiles();          // refresh file list
 			await fetchFilterOptions();  // bank/BU options may update
+			showSuccess(`Statement "${file.name}" uploaded successfully.`);
 		} catch (err: any) {
 			setError(err?.response?.data?.detail || "Statement upload failed.");
 		} finally {
@@ -353,6 +362,16 @@ export default function Dashboard() {
 						<span className="font-medium tracking-wide">{error}</span>
 					</div>
 					<button onClick={() => setError("")} className="text-gray-400 hover:text-gray-600 text-base px-2">×</button>
+				</div>
+			)}
+
+			{successMessage && (
+				<div className="bg-emerald-50 border-l-4 border-emerald-500 text-gray-900 px-4 py-3.5 shadow-sm text-sm flex items-center justify-between">
+					<div className="flex items-center gap-3">
+						<CheckCircle2 size={18} className="text-emerald-500 shrink-0" />
+						<span className="font-medium tracking-wide">{successMessage}</span>
+					</div>
+					<button onClick={() => setSuccessMessage("")} className="text-gray-400 hover:text-gray-600 text-base px-2">×</button>
 				</div>
 			)}
 
@@ -551,39 +570,39 @@ export default function Dashboard() {
 					</div>
 				</div>
 
-				{/* KPI CARDS */}
+				{/* KPI CARDS — labels + subtitles updated to match screenshot */}
 				<div className="grid grid-cols-2 lg:grid-cols-4 gap-4 pt-1">
 					<div className="border border-gray-200 p-4 rounded-sm bg-gray-50/30">
 						<div className="flex items-center gap-1.5 text-gray-400 mb-1">
 							<Layers size={13} className="text-[#1E3A5F]" />
-							<span className="text-[10px] font-bold uppercase tracking-wider">Total Rows Ingested</span>
+							<span className="text-[10px] font-bold uppercase tracking-wider">Total rows ingested</span>
 						</div>
 						<div className="text-xl font-black text-primary">{(displayMetrics.total_rows_ingested ?? 0).toLocaleString()}</div>
-						<div className="mt-2 pt-1.5 text-[10px] text-gray-400 font-medium leading-normal">Transaction(s) read</div>
+						<div className="mt-2 pt-1.5 text-[10px] text-gray-400 font-medium leading-normal">Transactions read</div>
 					</div>
 
 					<div className="border border-gray-200 p-4 rounded-sm bg-gray-50/30">
 						<div className="flex items-center gap-1.5 text-gray-400 mb-1">
 							<Sparkles size={13} className="text-[#1E3A5F]" />
-							<span className="text-[10px] font-bold uppercase tracking-wider">{METRIC_CONFIG.found.name}</span>
+							<span className="text-[10px] font-bold uppercase tracking-wider">Found</span>
 						</div>
 						<div className="text-xl font-black text-primary">{(displayMetrics.found ?? 0).toLocaleString()}</div>
-						<div className="mt-2 pt-1.5 text-[10px] text-gray-400 font-medium leading-normal">Customer(s) and invoice(s) identified</div>
+						<div className="mt-2 pt-1.5 text-[10px] text-gray-400 font-medium leading-normal">Customer and invoice identified</div>
 					</div>
 
 					<div className="border border-gray-200 p-4 rounded-sm bg-gray-50/30">
 						<div className="flex items-center gap-1.5 text-gray-400 mb-1">
 							<AlertTriangle size={13} className="text-[#2E6DA4]" />
-							<span className="text-[10px] font-bold uppercase tracking-wider">{METRIC_CONFIG.notFound.name}</span>
+							<span className="text-[10px] font-bold uppercase tracking-wider">Not found</span>
 						</div>
 						<div className="text-xl font-black text-primary">{(displayMetrics.not_found ?? 0).toLocaleString()}</div>
-						<div className="mt-2 pt-1.5 text-[10px] text-gray-400 font-medium leading-normal">Needs manual review</div>
+						<div className="mt-2 pt-1.5 text-[10px] text-gray-400 font-medium leading-normal">Require manual review</div>
 					</div>
 
 					<div className="border border-gray-200 p-4 rounded-sm bg-gray-50/30">
 						<div className="flex items-center gap-1.5 text-gray-400 mb-1">
 							<ShieldCheck size={13} className="text-[#4A90E2]" />
-							<span className="text-[10px] font-bold uppercase tracking-wider">{METRIC_CONFIG.passed.name}</span>
+							<span className="text-[10px] font-bold uppercase tracking-wider">Passed validation</span>
 						</div>
 						<div className="text-xl font-black text-primary">{(displayMetrics.passed_validation ?? 0).toLocaleString()}</div>
 						<div className="mt-2 pt-1.5 text-[10px] text-gray-400 font-medium leading-normal">Amount and currency match</div>
@@ -592,16 +611,16 @@ export default function Dashboard() {
 					<div className="border border-gray-200 p-4 rounded-sm bg-gray-50/30">
 						<div className="flex items-center gap-1.5 text-gray-400 mb-1">
 							<Ban size={13} className="text-[#e11d48]" />
-							<span className="text-[10px] font-bold uppercase tracking-wider">{METRIC_CONFIG.failed.name}</span>
+							<span className="text-[10px] font-bold uppercase tracking-wider">Failed validation</span>
 						</div>
 						<div className="text-xl font-black text-primary">{(displayMetrics.failed_validation ?? 0).toLocaleString()}</div>
-						<div className="mt-2 pt-1.5 text-[10px] text-gray-400 font-medium leading-normal">Amount and currency mismatch</div>
+						<div className="mt-2 pt-1.5 text-[10px] text-gray-400 font-medium leading-normal">Amount or currency mismatch</div>
 					</div>
 
 					<div className="border border-gray-200 p-4 rounded-sm bg-gray-50/30">
 						<div className="flex items-center gap-1.5 text-gray-400 mb-1">
 							<Calendar size={13} className="text-[#f59e0b]" />
-							<span className="text-[10px] font-bold uppercase tracking-wider">{METRIC_CONFIG.pending.name}</span>
+							<span className="text-[10px] font-bold uppercase tracking-wider">Pending approval</span>
 						</div>
 						<div className="text-xl font-black text-primary">{(displayMetrics.pending_hitl ?? 0).toLocaleString()}</div>
 						<div className="mt-2 pt-1.5 text-[10px] text-gray-400 font-medium leading-normal">Awaiting SPOC review</div>
@@ -610,7 +629,7 @@ export default function Dashboard() {
 					<div className="border border-gray-200 p-4 rounded-sm bg-gray-50/30">
 						<div className="flex items-center gap-1.5 text-emerald-600 mb-1">
 							<ClipboardCheck size={13} className="text-emerald-600" />
-							<span className="text-[10px] font-bold uppercase tracking-wider">Approved</span>
+							<span className="text-[10px] font-bold uppercase tracking-wider">Approved and posted</span>
 						</div>
 						<div className="text-xl font-black text-primary">{(displayMetrics.approved ?? 0).toLocaleString()}</div>
 						<div className="mt-2 pt-1.5 text-[10px] text-gray-400 font-medium leading-normal">Posted to Oracle Fusion</div>
@@ -705,11 +724,19 @@ export default function Dashboard() {
 
 				{/* AI RUN DETAILS — static, no backend endpoint */}
 				<div className="space-y-4 pt-1">
-					<div>
-						<h4 className="text-xs font-black text-primary uppercase tracking-wider">AI Run Details</h4>
-						<p className="text-[11px] text-gray-500 mt-0.5">AI run details framework data specifications.</p>
+					<div className="flex items-start justify-between">
+						<div>
+							<h4 className="text-xs font-black text-primary uppercase tracking-wider">AI Run Details</h4>
+							<p className="text-[11px] text-gray-500 mt-0.5">AI run details framework data specifications.</p>
+						</div>
+						<button
+							onClick={() => setAiPanelVisible((v) => !v)}
+							className="text-[11px] font-medium text-gray-400 hover:text-primary transition-colors cursor-pointer shrink-0 ml-4"
+						>
+							{aiPanelVisible ? "Hide" : "Show"}
+						</button>
 					</div>
-					<div className="grid grid-cols-2 sm:grid-cols-3 gap-y-5 gap-x-6">
+					{aiPanelVisible && <div className="grid grid-cols-2 sm:grid-cols-3 gap-y-5 gap-x-6">
 						<div className="space-y-0.5">
 							<span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Model</span>
 							<span className="text-xs font-bold text-primary">Claude Sonnet 4</span>
@@ -734,7 +761,7 @@ export default function Dashboard() {
 							<span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Latency</span>
 							<span className="text-xs font-bold text-primary">34.2 sec</span>
 						</div>
-					</div>
+					</div>}
 				</div>
 			</div>
 		</div>

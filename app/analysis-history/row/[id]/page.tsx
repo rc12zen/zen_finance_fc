@@ -1,10 +1,6 @@
 "use client";
 /**
  * /app/analysis-history/row/[id]/page.tsx
- *
- * Full-page detail view for one matched_results row.
- * LEFT  — Bank info, AI extraction, aging match, validation rule checks
- * RIGHT — Remittance email (parsed view + raw body toggle)
  */
 
 import {
@@ -101,7 +97,7 @@ function InfoRow({ label, value, mono = false }: { label: string; value: any; mo
 	);
 }
 
-function RuleCard({ check, allInvoiceNumbers }: { check: Check; allInvoiceNumbers: string[] }) {
+function RuleCard({ check }: { check: Check }) {
 	const statusColor =
 		check.status === "passed"  ? "border-emerald-200 bg-emerald-50/60" :
 		check.status === "failed"  ? "border-red-200 bg-red-50/60" :
@@ -124,74 +120,109 @@ function RuleCard({ check, allInvoiceNumbers }: { check: Check; allInvoiceNumber
 						<span className="text-[12px] font-bold text-primary">{check.label}</span>
 					</div>
 
-					<div className="grid grid-cols-2 gap-3 mb-2">
-						<div className="bg-white/60 rounded-xs p-2 border border-white/80">
-							<span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider block mb-0.5">{check.left.label}</span>
-							<span className="text-[11px] font-mono font-bold text-primary break-all">{check.left.value || "—"}</span>
-						</div>
-						<div className="bg-white/60 rounded-xs p-2 border border-white/80">
-							<span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider block mb-0.5">{check.right.label}</span>
-							<span className="text-[11px] font-mono font-bold text-primary break-all">{check.right.value || "—"}</span>
-						</div>
-					</div>
-
-					{/* VAL-003 extra detail */}
-					{check.extra && check.rule === "VAL-003" && (
-						<div className="flex flex-wrap gap-3 mb-2 bg-white/50 rounded-xs p-2 border border-white/80">
-							{check.extra.diff_pct != null && (
-								<div className="text-center">
-									<div className="text-[9px] text-gray-400 uppercase tracking-wider">Diff</div>
-									<div className={`text-[13px] font-black ${check.status === "failed" ? "text-red-600" : "text-emerald-700"}`}>{check.extra.diff_pct}%</div>
+					{/* ── VAL-003: simplified TDS view ── */}
+					{check.rule === "VAL-003" ? (
+						<Val003Detail check={check} />
+					) : (
+						<>
+							<div className="grid grid-cols-2 gap-3 mb-2">
+								<div className="bg-white/60 rounded-xs p-2 border border-white/80">
+									<span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider block mb-0.5">{check.left.label}</span>
+									<span className="text-[11px] font-mono font-bold text-primary break-all">{check.left.value || "—"}</span>
 								</div>
-							)}
-							{check.extra.tds_pct_computed != null && (
-								<div className="text-center">
-									<div className="text-[9px] text-gray-400 uppercase tracking-wider">TDS%</div>
-									<div className={`text-[13px] font-black ${check.extra.tds_pct_computed >= 88 && check.extra.tds_pct_computed <= 92 ? "text-emerald-700" : "text-red-600"}`}>
-										{Number(check.extra.tds_pct_computed).toFixed(2)}%
-									</div>
-									<div className="text-[9px] text-gray-400">valid 88–92%</div>
-								</div>
-							)}
-							<div className="text-center">
-								<div className="text-[9px] text-gray-400 uppercase tracking-wider">Remittance</div>
-								<div className={`text-[11px] font-bold ${check.extra.remittance_status === "matched" ? "text-emerald-700" : "text-amber-600"}`}>
-									{check.extra.remittance_status || "not checked"}
+								<div className="bg-white/60 rounded-xs p-2 border border-white/80">
+									<span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider block mb-0.5">{check.right.label}</span>
+									<span className="text-[11px] font-mono font-bold text-primary break-all">{check.right.value || "—"}</span>
 								</div>
 							</div>
-							{check.extra.confirmed_count != null && (
-								<div className="text-center">
-									<div className="text-[9px] text-gray-400 uppercase tracking-wider">Confirmed invoices</div>
-									<div className="text-[13px] font-black text-emerald-700">{check.extra.confirmed_count}</div>
-								</div>
-							)}
-							{check.extra.missing_count > 0 && (
-								<div className="text-center">
-									<div className="text-[9px] text-gray-400 uppercase tracking-wider">Missing</div>
-									<div className="text-[13px] font-black text-red-600">{check.extra.missing_count}</div>
-								</div>
-							)}
-						</div>
-					)}
 
-					{/* VAL-006 invoice lists */}
-					{check.rule === "VAL-006" && check.extra?.confirmed_invoices?.length > 0 && (
-						<div className="flex flex-wrap gap-1 mb-2">
-							{check.extra.confirmed_invoices.map((inv: string) => (
-								<span key={inv} className="text-[9px] font-mono bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-xs">{inv}</span>
-							))}
-						</div>
-					)}
-					{check.rule === "VAL-006" && check.extra?.missing_invoices?.length > 0 && (
-						<div className="flex flex-wrap gap-1 mb-2">
-							{check.extra.missing_invoices.map((inv: string) => (
-								<span key={inv} className="text-[9px] font-mono bg-red-100 text-red-700 px-1.5 py-0.5 rounded-xs">{inv} ✗</span>
-							))}
-						</div>
+							{/* VAL-006 invoice lists */}
+							{check.rule === "VAL-006" && check.extra?.confirmed_invoices?.length > 0 && (
+								<div className="flex flex-wrap gap-1 mb-2">
+									{check.extra.confirmed_invoices.map((inv: string) => (
+										<span key={inv} className="text-[9px] font-mono bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-xs">{inv}</span>
+									))}
+								</div>
+							)}
+							{check.rule === "VAL-006" && check.extra?.missing_invoices?.length > 0 && (
+								<div className="flex flex-wrap gap-1 mb-2">
+									{check.extra.missing_invoices.map((inv: string) => (
+										<span key={inv} className="text-[9px] font-mono bg-red-100 text-red-700 px-1.5 py-0.5 rounded-xs">{inv} ✗</span>
+									))}
+								</div>
+							)}
+						</>
 					)}
 
 					<p className={`text-[11px] font-medium ${noteColor}`}>{check.note}</p>
 				</div>
+			</div>
+		</div>
+	);
+}
+
+// ── VAL-003 simplified detail ─────────────────────────────────────────────────
+
+function Val003Detail({ check }: { check: Check }) {
+	const extra = check.extra || {};
+
+	// TDS verdict
+	const tdsPct      = extra.tds_pct_computed != null ? Number(extra.tds_pct_computed) : null;
+	const remStatus   = extra.remittance_status as string | undefined;
+	const hasRem      = remStatus === "matched";
+
+	// Determine TDS verdict label
+	let tdsVerdict: "yes" | "no" | "unknown" = "unknown";
+	if (tdsPct != null) {
+		// TDS likely deducted if credit < outstanding (i.e. tds_pct > 0)
+		// Standard TDS range in India: 1–20%, most common 10%
+		tdsVerdict = (tdsPct >= 1 && tdsPct <= 25) ? "yes" : "no";
+	}
+
+	const verdictColor =
+		tdsVerdict === "yes"     ? "bg-amber-50 border-amber-200 text-amber-700" :
+		tdsVerdict === "no"      ? "bg-emerald-50 border-emerald-200 text-emerald-700" :
+		                           "bg-gray-50 border-gray-200 text-gray-500";
+
+	const verdictText =
+		tdsVerdict === "yes"     ? `TDS likely deducted — ${tdsPct?.toFixed(2)}%` :
+		tdsVerdict === "no"      ? "No TDS deduction detected" :
+		                           "TDS status unknown";
+
+	return (
+		<div className="space-y-2 mb-2">
+			{/* TDS verdict pill */}
+			<div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-sm border text-[11px] font-bold ${verdictColor}`}>
+				{tdsVerdict === "yes"
+					? <AlertTriangle size={12} className="shrink-0" />
+					: tdsVerdict === "no"
+					? <CheckCircle2 size={12} className="shrink-0" />
+					: <MinusCircle size={12} className="shrink-0" />}
+				{verdictText}
+			</div>
+
+			{/* Amount comparison row */}
+			<div className="grid grid-cols-2 gap-3">
+				<div className="bg-white/60 rounded-xs p-2 border border-white/80">
+					<span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider block mb-0.5">{check.left.label}</span>
+					<span className="text-[11px] font-mono font-bold text-primary break-all">{check.left.value || "—"}</span>
+				</div>
+				<div className="bg-white/60 rounded-xs p-2 border border-white/80">
+					<span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider block mb-0.5">{check.right.label}</span>
+					<span className="text-[11px] font-mono font-bold text-primary break-all">{check.right.value || "—"}</span>
+				</div>
+			</div>
+
+			{/* Remittance confirmation line */}
+			<div className="flex items-center gap-2 text-[10px] font-medium text-gray-500">
+				<span className="text-gray-400 uppercase tracking-wider text-[9px] font-bold">Remittance:</span>
+				{hasRem ? (
+					<span className="text-emerald-600 font-bold">Confirmed by remittance email</span>
+				) : remStatus === "no_remittance" ? (
+					<span className="text-amber-600 font-bold">No remittance email — not confirmed</span>
+				) : (
+					<span className="text-gray-400">Not checked</span>
+				)}
 			</div>
 		</div>
 	);
@@ -204,11 +235,11 @@ export default function RowDetailPage() {
 	const router   = useRouter();
 	const recordId = Number(params?.id);
 
-	const [detail, setDetail]           = useState<RowDetail | null>(null);
-	const [loading, setLoading]         = useState(true);
+	const [detail, setDetail]               = useState<RowDetail | null>(null);
+	const [loading, setLoading]             = useState(true);
 	const [actionLoading, setActionLoading] = useState(false);
-	const [rightTab, setRightTab]       = useState<"parsed" | "raw">("parsed");
-	const [error, setError]             = useState("");
+	const [rightTab, setRightTab]           = useState<"parsed" | "raw">("parsed");
+	const [error, setError]                 = useState("");
 
 	const fetchDetail = useCallback(async () => {
 		if (!recordId) return;
@@ -247,7 +278,6 @@ export default function RowDetailPage() {
 		detail?.hitl.status === "rejected" ? "bg-red-100 text-red-700 border-red-300" :
 		                                      "bg-amber-100 text-amber-700 border-amber-300";
 
-	// ── Loading / error states ─────────────────────────────────────────────────
 	if (loading) return (
 		<div className="min-h-screen flex items-center justify-center bg-gray-50">
 			<RefreshCw size={24} className="text-gray-400 animate-spin mr-3" />
@@ -266,13 +296,13 @@ export default function RowDetailPage() {
 		</div>
 	);
 
-	// ── Enrich VAL-006 check with full invoice lists ───────────────────────────
+	// Enrich VAL-006 check with full invoice lists from aging_match
 	const enrichedChecks = detail.validation.checks.map((check) => {
 		if (check.rule === "VAL-006") {
 			return {
 				...check,
-				left:  { label: "Confirmed in aging", value: String(detail.validation.checks.find(c => c.rule === "VAL-006")?.left.value ?? 0) },
-				right: { label: "Missing from aging",  value: String(detail.validation.checks.find(c => c.rule === "VAL-006")?.right.value ?? 0) },
+				left:  { label: "Confirmed in aging", value: String(check.left.value ?? 0) },
+				right: { label: "Missing from aging",  value: String(check.right.value ?? 0) },
 				extra: {
 					...check.extra,
 					confirmed_invoices: detail.aging_match.matched_invoices?.map((m: any) => m.invoice) || [],
@@ -283,10 +313,14 @@ export default function RowDetailPage() {
 		return check;
 	});
 
+	// Separate confirmed invoices for the aging match section
+	// matched_invoices from the backend are already the confirmed ones (in aging)
+	const confirmedInvoices = detail.aging_match.matched_invoices || [];
+
 	return (
 		<div className="min-h-screen bg-gray-50 flex flex-col">
 
-			{/* ── Top nav bar ──────────────────────────────────────────────────── */}
+			{/* ── Top nav bar ─────────────────────────────────────────────── */}
 			<div className="bg-[#1E3A5F] text-white px-6 py-4 flex items-center justify-between flex-shrink-0 shadow-md">
 				<div className="flex items-center gap-4">
 					<button onClick={() => router.back()}
@@ -322,12 +356,10 @@ export default function RowDetailPage() {
 				</div>
 			</div>
 
-			{/* ── Body — 2 column split ─────────────────────────────────────────── */}
+			{/* ── Body ────────────────────────────────────────────────────── */}
 			<div className="flex-1 grid grid-cols-1 lg:grid-cols-2 divide-x divide-gray-200 overflow-hidden" style={{ minHeight: "calc(100vh - 72px)" }}>
 
-				{/* ════════════════════════════════════════════════════════════════
-				    LEFT — Statement + Extraction + Aging + Validation
-				    ════════════════════════════════════════════════════════════════ */}
+				{/* LEFT */}
 				<div className="overflow-y-auto p-6 space-y-6 bg-white">
 
 					{/* Bank Statement */}
@@ -352,11 +384,11 @@ export default function RowDetailPage() {
 							<ShieldCheck size={13} className="text-[#2E6DA4]" /> AI Extraction
 						</h3>
 						<div className="bg-gray-50 border border-gray-200 rounded-sm px-4 py-1">
-							<InfoRow label="Method"        value={detail.extraction.method} />
-							<InfoRow label="Confidence"    value={detail.extraction.confidence_score ? `${(detail.extraction.confidence_score * 100).toFixed(0)}%` : "—"} />
-							<InfoRow label="Customer"      value={detail.extraction.extracted_customer} />
-							<InfoRow label="Invoice(s)"    value={(detail.extraction.all_invoice_numbers || []).join(", ")} mono />
-							<InfoRow label="Row Type"      value={detail.extraction.row_type} />
+							<InfoRow label="Method"     value={detail.extraction.method} />
+							<InfoRow label="Confidence" value={detail.extraction.confidence_score ? `${(detail.extraction.confidence_score * 100).toFixed(0)}%` : "—"} />
+							<InfoRow label="Customer"   value={detail.extraction.extracted_customer} />
+							<InfoRow label="Invoice(s)" value={(detail.extraction.all_invoice_numbers || []).join(", ")} mono />
+							<InfoRow label="Row Type"   value={detail.extraction.row_type} />
 						</div>
 					</section>
 
@@ -374,10 +406,18 @@ export default function RowDetailPage() {
 							<InfoRow label="OU / SEGMENT1" value={`${detail.aging_match.ou_number || "—"} → aging: ${detail.aging_match.aging_ou_number || "—"}`} mono />
 						</div>
 
-						{detail.aging_match.matched_invoices?.length > 1 && (
+						{/* ── Confirmed invoices breakdown ─────────────────────── */}
+						{confirmedInvoices.length > 0 && (
 							<div className="mt-3 border border-gray-200 rounded-sm overflow-hidden">
-								<div className="bg-gray-100 px-3 py-2 text-[9px] font-black text-gray-500 uppercase tracking-wider">
-									Multi-invoice breakdown ({detail.aging_match.matched_invoices.length} invoices)
+								<div className="bg-[#1E3A5F] px-3 py-2 flex items-center justify-between">
+									<span className="text-[9px] font-black text-white uppercase tracking-wider">
+										{confirmedInvoices.length === 1
+											? "Invoice Confirmed in Aging"
+											: `${confirmedInvoices.length} Invoices Confirmed in Aging`}
+									</span>
+									<span className="text-[9px] font-bold text-emerald-300">
+										Will be posted to Oracle
+									</span>
 								</div>
 								<table className="w-full text-[10px]">
 									<thead>
@@ -388,16 +428,40 @@ export default function RowDetailPage() {
 										</tr>
 									</thead>
 									<tbody className="divide-y divide-gray-100">
-										{detail.aging_match.matched_invoices.map((inv: any, i: number) => (
-											<tr key={i} className="hover:bg-gray-50">
-												<td className="px-3 py-1.5 font-mono font-bold text-primary">{inv.invoice}</td>
-												<td className="px-3 py-1.5 text-gray-600 max-w-[160px] truncate">{inv.customer}</td>
-												<td className="px-3 py-1.5 font-mono text-right">{Number(inv.outstanding||0).toLocaleString(undefined,{minimumFractionDigits:2})}</td>
-												<td className="px-3 py-1.5 text-gray-400">{inv.currency}</td>
-												<td className="px-3 py-1.5 text-gray-500">{inv.ou_number}</td>
+										{confirmedInvoices.map((inv: any, i: number) => (
+											<tr key={i} className="hover:bg-emerald-50/30">
+												<td className="px-3 py-2 font-mono font-bold text-primary">
+													<span className="flex items-center gap-1.5">
+														<CheckCircle2 size={10} className="text-emerald-500 shrink-0" />
+														{inv.invoice}
+													</span>
+												</td>
+												<td className="px-3 py-2 text-gray-600 max-w-[160px] truncate">{inv.customer}</td>
+												<td className="px-3 py-2 font-mono font-bold text-right text-primary">
+													{Number(inv.outstanding || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+												</td>
+												<td className="px-3 py-2 text-gray-400">{inv.currency}</td>
+												<td className="px-3 py-2 text-gray-500">{inv.ou_number}</td>
 											</tr>
 										))}
 									</tbody>
+									{confirmedInvoices.length > 1 && (
+										<tfoot className="border-t-2 border-gray-200 bg-gray-50">
+											<tr>
+												<td colSpan={2} className="px-3 py-1.5 text-[9px] font-black text-gray-400 uppercase tracking-wider">
+													Total Outstanding
+												</td>
+												<td className="px-3 py-1.5 font-mono font-black text-right text-primary">
+													{confirmedInvoices
+														.reduce((s: number, inv: any) => s + Number(inv.outstanding || 0), 0)
+														.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+												</td>
+												<td colSpan={2} className="px-3 py-1.5 text-gray-400 text-[9px]">
+													{confirmedInvoices[0]?.currency}
+												</td>
+											</tr>
+										</tfoot>
+									)}
 								</table>
 							</div>
 						)}
@@ -419,7 +483,7 @@ export default function RowDetailPage() {
 						</h3>
 						<div className="space-y-3">
 							{enrichedChecks.map((check) => (
-								<RuleCard key={check.rule} check={check} allInvoiceNumbers={detail.extraction.all_invoice_numbers || []} />
+								<RuleCard key={check.rule} check={check} />
 							))}
 						</div>
 					</section>
@@ -436,17 +500,13 @@ export default function RowDetailPage() {
 					)}
 				</div>
 
-				{/* ════════════════════════════════════════════════════════════════
-				    RIGHT — Remittance Email
-				    ════════════════════════════════════════════════════════════════ */}
+				{/* RIGHT — Remittance Email */}
 				<div className="flex flex-col overflow-hidden bg-white">
-					{/* Right panel header */}
 					<div className="flex items-center gap-2 px-6 py-3 border-b border-gray-200 bg-gray-50 flex-shrink-0">
 						<Mail size={14} className="text-[#2E6DA4]" />
 						<span className="text-[10px] font-black text-primary uppercase tracking-wider flex-1">
 							Remittance Email
 						</span>
-
 						{detail.remittance && (
 							<div className="flex items-center gap-1 bg-white border border-gray-200 rounded-sm p-0.5">
 								<button onClick={() => setRightTab("parsed")}
@@ -461,7 +521,6 @@ export default function RowDetailPage() {
 						)}
 					</div>
 
-					{/* No remittance state */}
 					{!detail.remittance ? (
 						<div className="flex-1 flex flex-col items-center justify-center text-center p-10">
 							<Mail size={48} className="text-gray-200 mb-4" />
@@ -479,9 +538,7 @@ export default function RowDetailPage() {
 							</div>
 						</div>
 					) : rightTab === "parsed" ? (
-						/* Parsed remittance */
 						<div className="flex-1 overflow-y-auto p-6 space-y-5">
-							{/* Metadata */}
 							<div className="bg-blue-50 border border-blue-100 rounded-sm px-4 py-1">
 								<InfoRow label="File"         value={detail.remittance.filename} mono />
 								<InfoRow label="From"         value={detail.remittance.sender} />
@@ -492,7 +549,6 @@ export default function RowDetailPage() {
 								<InfoRow label="Amount"       value={`${Number(detail.remittance.payment_amount||0).toLocaleString(undefined,{minimumFractionDigits:2})} ${detail.remittance.payment_currency}`} mono />
 							</div>
 
-							{/* Invoice breakdown table */}
 							{detail.remittance.invoices?.length > 0 && (
 								<section>
 									<h4 className="text-[9px] font-black text-gray-400 uppercase tracking-wider mb-2">
@@ -527,18 +583,10 @@ export default function RowDetailPage() {
 											<tfoot className="border-t-2 border-gray-300 bg-gray-50">
 												<tr>
 													<td className="px-3 py-2 text-[9px] font-black text-gray-500 uppercase tracking-wider">Total</td>
-													<td className="px-3 py-2 font-mono font-black text-right text-primary">
-														{detail.remittance.invoices.reduce((s, i) => s + (i.doc_amount || 0), 0).toLocaleString(undefined,{minimumFractionDigits:2})}
-													</td>
-													<td className="px-3 py-2 font-mono font-black text-right text-amber-700">
-														{detail.remittance.invoices.reduce((s, i) => s + (i.tds_withheld || 0), 0).toLocaleString(undefined,{minimumFractionDigits:2})}
-													</td>
-													<td className="px-3 py-2 font-mono font-black text-right text-emerald-700">
-														{detail.remittance.invoices.reduce((s, i) => s + (i.amount_paid || 0), 0).toLocaleString(undefined,{minimumFractionDigits:2})}
-													</td>
-													<td className="px-3 py-2 font-mono font-black text-right text-red-600">
-														{detail.remittance.invoices.reduce((s, i) => s + (i.tds_deducted || 0), 0).toLocaleString(undefined,{minimumFractionDigits:2})}
-													</td>
+													<td className="px-3 py-2 font-mono font-black text-right text-primary">{detail.remittance.invoices.reduce((s,i)=>s+(i.doc_amount||0),0).toLocaleString(undefined,{minimumFractionDigits:2})}</td>
+													<td className="px-3 py-2 font-mono font-black text-right text-amber-700">{detail.remittance.invoices.reduce((s,i)=>s+(i.tds_withheld||0),0).toLocaleString(undefined,{minimumFractionDigits:2})}</td>
+													<td className="px-3 py-2 font-mono font-black text-right text-emerald-700">{detail.remittance.invoices.reduce((s,i)=>s+(i.amount_paid||0),0).toLocaleString(undefined,{minimumFractionDigits:2})}</td>
+													<td className="px-3 py-2 font-mono font-black text-right text-red-600">{detail.remittance.invoices.reduce((s,i)=>s+(i.tds_deducted||0),0).toLocaleString(undefined,{minimumFractionDigits:2})}</td>
 												</tr>
 											</tfoot>
 										</table>
@@ -547,7 +595,6 @@ export default function RowDetailPage() {
 							)}
 						</div>
 					) : (
-						/* Raw email body */
 						<div className="flex-1 overflow-y-auto p-6">
 							<pre className="text-[10px] font-mono text-gray-600 leading-relaxed whitespace-pre-wrap break-words bg-gray-50 border border-gray-200 rounded-sm p-4 min-h-full">
 								{detail.remittance.raw_body || "No body content available."}

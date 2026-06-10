@@ -49,14 +49,16 @@ export default function LoginScreen() {
 				{/* BRAND HEADER SEGMENT */}
 				<div className="text-center space-y-2.5">
 					{/* (logo) */}
-					<div className="inline-flex items-center justify-center h-12 w-12 rounded-sm overflow-hidden">
-						<Image
-							src="/logo.png"
-							alt="Logo"
-							width={45}
-							height={45}
-							className="object-contain"
-						/>
+					{/* (logo) */}
+					{/* (logo) */}
+					<div className="inline-flex items-center justify-center h-28 w-28 rounded-sm overflow-hidden">
+					<Image
+						src="/logo.png"
+						alt="Logo"
+						width={110}
+						height={110}
+						className="object-contain"
+					/>
 					</div>
 
 					{/* (title) */}
