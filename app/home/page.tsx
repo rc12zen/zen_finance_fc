@@ -72,7 +72,7 @@ const METRIC_CONFIG = {
 	notFound: { name: "Not Found",          color: "#2E6DA4" },
 	passed:   { name: "Passed Validation",  color: "#4A90E2" },
 	failed:   { name: "Failed Validation",  color: "#e11d48" },
-	pending:  { name: "Pending HITL",       color: "#f59e0b" },
+	pending:  { name: "Pending Approval",       color: "#f59e0b" },
 };
 
 export default function Dashboard() {
@@ -341,10 +341,7 @@ export default function Dashboard() {
 						Welcome back, {userDisplayName}.
 					</h2>
 					<p className="text-xs text-gray-600 mt-2 leading-relaxed">
-						Your workspace is ready. Upload your account statements and aging
-						report below, then start the matching process. The AI will
-						automatically identify customers, match invoices, and flag anything
-						that needs your attention - all in seconds!
+						Your workspace is ready, upload Aging report and atleast one bank account statement below, then start analysis. The AI will automatically  identify customers, match invoices and flag anything that needs your attention - all in seconds!
 					</p>
 				</div>
 			</div>
