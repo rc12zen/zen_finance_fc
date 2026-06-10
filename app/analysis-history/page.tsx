@@ -184,7 +184,7 @@ function FilePreviewPanel({ filename, bucket = "active" }: { filename: string; b
 				<table className="w-full text-left border-collapse text-[10px]" style={{ minWidth: `${preview.columns.length * 110}px` }}>
 					<thead className="sticky top-0 z-10">
 						<tr className="bg-[#1E3A5F] text-white">
-							<th className="px-2 py-2 text-[9px] font-black uppercase tracking-wider text-gray-400 w-10 text-center bg-[#1E3A5F]">#</th>
+							<th className="px-2 py-2 text-[9px] font-black uppercase tracking-wider text-white/50 w-10 text-center bg-[#1E3A5F]">#</th>
 							{preview.columns.map((col) => (
 								<th key={col} className="px-2.5 py-2 text-[9px] font-black uppercase tracking-wider whitespace-nowrap bg-[#1E3A5F]">{col}</th>
 							))}
@@ -375,6 +375,7 @@ export default function AnalysisHistoryPage() {
 
 	// File preview state
 	const [previewFile, setPreviewFile]             = useState<string>("");
+	const [previewVisible, setPreviewVisible]        = useState<boolean>(true);
 
 	// Oracle detail drawer state
 	const [oracleDrawerLine, setOracleDrawerLine]   = useState<LineItem | null>(null);
@@ -434,6 +435,7 @@ export default function AnalysisHistoryPage() {
 		setActiveTab("all");
 		setSearchNarrative("");
 		setPreviewFile((run.selected_files || [])[0] || "");
+		setPreviewVisible(true);
 		try {
 			const res  = await getRunSummary(run.run_id);
 			const data = res.data;
@@ -737,7 +739,18 @@ export default function AnalysisHistoryPage() {
 
 				<div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch flex-1 min-h-0 overflow-hidden">
 					{/* Left — statement preview */}
-					<div className="lg:col-span-4 flex flex-col h-full overflow-hidden border border-gray-200 rounded-sm bg-white shadow-xs">
+					<div className={`transition-all duration-200 flex flex-col h-full overflow-hidden border border-gray-200 rounded-sm bg-white shadow-xs ${previewVisible ? "lg:col-span-4" : "lg:col-span-1 min-w-[48px]"}`}>
+						{/* Hide/Show toggle */}
+						<div className="flex-shrink-0 border-b border-gray-200 bg-[#1E3A5F] px-3 py-2 flex items-center justify-between">
+							{previewVisible && <span className="text-[9px] font-black text-white uppercase tracking-wider truncate">Statement Preview</span>}
+							<button
+								onClick={() => setPreviewVisible((v) => !v)}
+								className="ml-auto text-[9px] font-black text-white/70 hover:text-white cursor-pointer px-1.5 py-0.5 rounded-xs hover:bg-white/10 transition-colors whitespace-nowrap"
+								title={previewVisible ? "Hide preview" : "Show preview"}
+							>
+								{previewVisible ? "Hide ✕" : "▶"}
+							</button>
+						</div>
 						{allFiles.length > 1 && (
 							<div className="flex-shrink-0 border-b border-gray-200 bg-gray-50 px-3 py-2">
 								<div className="text-[9px] font-black text-gray-400 uppercase tracking-wider mb-1.5">Statement Files</div>
@@ -754,23 +767,23 @@ export default function AnalysisHistoryPage() {
 								</div>
 							</div>
 						)}
-						{allFiles.length === 1 && (
+						{previewVisible && allFiles.length === 1 && (
 							<div className="flex-shrink-0 border-b border-gray-200 bg-gray-50 px-3 py-2">
 								<div className="text-[9px] font-black text-gray-400 uppercase tracking-wider">Statement Preview</div>
 							</div>
 						)}
-						{previewFile ? (
+						{previewVisible && (previewFile ? (
 							<FilePreviewPanel filename={previewFile} bucket="active" />
 						) : (
 							<div className="flex-1 flex flex-col items-center justify-center text-gray-300 border-dashed">
 								<FileText size={48} className="mb-3 stroke-[1.25]" />
 								<span className="text-xs font-black text-gray-400 uppercase tracking-wider">No file selected</span>
 							</div>
-						)}
+						))}
 					</div>
 
 					{/* Right — scrollable */}
-					<div className="lg:col-span-8 flex flex-col h-full overflow-y-auto space-y-4 pr-2">
+					<div className={`flex flex-col h-full overflow-y-auto space-y-4 pr-2 ${previewVisible ? "lg:col-span-8" : "lg:col-span-11"}`}>
 						{/* Header */}
 						<div className="flex flex-col sm:flex-row items-start justify-between gap-4 bg-white border border-gray-200 p-4 rounded-sm shadow-2xs flex-shrink-0">
 							<div>
@@ -861,8 +874,8 @@ export default function AnalysisHistoryPage() {
 										{activeRows.map((line) => {
 											const busy       = !!actionLoading[line.id];
 											const isMatch    = line._source === "matched";
-											const canApprove = isMatch && line.hitl_status !== "approved" && line.validation_status === "passed";
-											const canReject  = isMatch && line.hitl_status !== "rejected";
+											const canApprove = isMatch && line.hitl_status !== "approved" && line.hitl_status !== "rejected" && line.validation_status === "passed";
+											const canReject  = isMatch && line.hitl_status !== "rejected" && line.hitl_status !== "approved";
 
 											let statusVal = "Not Found";
 											if (isMatch) {

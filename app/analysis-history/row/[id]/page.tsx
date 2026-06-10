@@ -76,8 +76,12 @@ interface RowDetail {
 	};
 	remittance: Remittance | null;
 	hitl: {
-		status: string; oracle_ref: string | null;
+		status: string;
+		oracle_ref: string | null;
 		oracle_posted_at: string | null;
+		oracle_post_status: string | null;
+		oracle_post_message: string | null;
+		oracle_standard_receipt_id: string | null;
 		remittance_status: string | null;
 		remittance_ref: string | null;
 		remittance_filename: string | null;
@@ -171,12 +175,11 @@ function Val003Detail({ check }: { check: Check }) {
 	const remStatus   = extra.remittance_status as string | undefined;
 	const hasRem      = remStatus === "matched";
 
-	// Determine TDS verdict label
+	// TDS verdict: "likely" only if the difference ≈ 10% of outstanding
+	// i.e. credit ≈ outstanding × 0.90  →  tds_pct ≈ 10% (allow ±2%)
 	let tdsVerdict: "yes" | "no" | "unknown" = "unknown";
 	if (tdsPct != null) {
-		// TDS likely deducted if credit < outstanding (i.e. tds_pct > 0)
-		// Standard TDS range in India: 1–20%, most common 10%
-		tdsVerdict = (tdsPct >= 1 && tdsPct <= 25) ? "yes" : "no";
+		tdsVerdict = (tdsPct >= 8 && tdsPct <= 12) ? "yes" : "no";
 	}
 
 	const verdictColor =
@@ -185,9 +188,9 @@ function Val003Detail({ check }: { check: Check }) {
 		                           "bg-gray-50 border-gray-200 text-gray-500";
 
 	const verdictText =
-		tdsVerdict === "yes"     ? `TDS likely deducted — ${tdsPct?.toFixed(2)}%` :
-		tdsVerdict === "no"      ? "No TDS deduction detected" :
-		                           "TDS status unknown";
+		tdsVerdict === "yes"     ? `TDS likely deducted — ~10% (${tdsPct?.toFixed(2)}% of outstanding)` :
+		tdsVerdict === "no"      ? `No standard TDS detected (${tdsPct != null ? tdsPct.toFixed(2) + "%" : "—"} difference)` :
+		                           "TDS status unknown — no outstanding data";
 
 	return (
 		<div className="space-y-2 mb-2">
@@ -362,6 +365,76 @@ export default function RowDetailPage() {
 				{/* LEFT */}
 				<div className="overflow-y-auto p-6 space-y-6 bg-white">
 
+					{/* ── PROCESSED BANNER ─────────────────────────────────── */}
+					{detail.hitl.status === "approved" && detail.hitl.oracle_post_status === "success" && detail.hitl.oracle_ref && (
+						<div className="bg-emerald-600 text-white rounded-sm px-5 py-4 flex flex-col gap-3">
+							{/* Header */}
+							<div className="flex items-center gap-3">
+								<CheckCircle2 size={20} className="shrink-0" />
+								<div>
+									<div className="text-sm font-black uppercase tracking-wider">Record Processed</div>
+									<div className="text-[10px] text-emerald-100 mt-0.5">Successfully posted to Oracle Fusion AR</div>
+								</div>
+							</div>
+							{/* Receipt details grid */}
+							<div className="grid grid-cols-2 gap-x-6 gap-y-2 bg-emerald-700/40 rounded-xs p-3">
+								<div>
+									<div className="text-[9px] text-emerald-200 uppercase tracking-wider font-bold">Receipt Number</div>
+									<div className="text-[11px] font-mono font-black text-white mt-0.5">{detail.hitl.oracle_ref}</div>
+								</div>
+								{detail.hitl.oracle_standard_receipt_id && (
+									<div>
+										<div className="text-[9px] text-emerald-200 uppercase tracking-wider font-bold">Standard Receipt ID</div>
+										<div className="text-[11px] font-mono font-black text-white mt-0.5">{detail.hitl.oracle_standard_receipt_id}</div>
+									</div>
+								)}
+								<div>
+									<div className="text-[9px] text-emerald-200 uppercase tracking-wider font-bold">Posted At</div>
+									<div className="text-[11px] font-mono font-black text-white mt-0.5">{detail.hitl.oracle_posted_at || "—"}</div>
+								</div>
+								<div>
+									<div className="text-[9px] text-emerald-200 uppercase tracking-wider font-bold">Business Unit</div>
+									<div className="text-[11px] font-mono font-black text-white mt-0.5">{detail.aging_match.business_unit || "—"}</div>
+								</div>
+								<div>
+									<div className="text-[9px] text-emerald-200 uppercase tracking-wider font-bold">Amount Posted</div>
+									<div className="text-[11px] font-mono font-black text-white mt-0.5">
+										{Number(detail.bank_info.credit_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })} {detail.bank_info.currency}
+									</div>
+								</div>
+								<div>
+									<div className="text-[9px] text-emerald-200 uppercase tracking-wider font-bold">Invoice(s)</div>
+									<div className="text-[11px] font-mono font-black text-white mt-0.5 break-all">
+										{detail.aging_match.matched_invoice || "—"}
+									</div>
+								</div>
+							</div>
+							{detail.hitl.oracle_post_message && (
+								<div className="text-[10px] text-emerald-100 font-mono border-t border-emerald-500 pt-2">
+									{detail.hitl.oracle_post_message}
+								</div>
+							)}
+						</div>
+					)}
+
+					{/* ── POST FAILED BANNER ──────────────────────────────── */}
+					{detail.hitl.status === "approved" && detail.hitl.oracle_post_status === "failed" && (
+						<div className="bg-red-600 text-white rounded-sm px-5 py-4 flex flex-col gap-2">
+							<div className="flex items-center gap-3">
+								<AlertTriangle size={20} className="shrink-0" />
+								<div>
+									<div className="text-sm font-black uppercase tracking-wider">Oracle Post Failed</div>
+									<div className="text-[10px] text-red-100 mt-0.5">Approved by SPOC but Oracle Fusion POST failed</div>
+								</div>
+							</div>
+							{detail.hitl.oracle_post_message && (
+								<div className="text-[10px] font-mono bg-red-700/40 rounded-xs p-2 break-all">
+									{detail.hitl.oracle_post_message}
+								</div>
+							)}
+						</div>
+					)}
+
 					{/* Bank Statement */}
 					<section>
 						<h3 className="text-[10px] font-black text-primary uppercase tracking-wider mb-3 flex items-center gap-1.5">
@@ -488,13 +561,27 @@ export default function RowDetailPage() {
 						</div>
 					</section>
 
-					{/* Oracle posted */}
-					{detail.hitl.oracle_ref && (
+					{/* Oracle receipt section — shown when posted */}
+					{detail.hitl.oracle_post_status === "success" && detail.hitl.oracle_ref && (
 						<section>
 							<h3 className="text-[10px] font-black text-primary uppercase tracking-wider mb-3">Oracle Fusion Receipt</h3>
 							<div className="bg-emerald-50 border border-emerald-200 rounded-sm px-4 py-1">
-								<InfoRow label="Transaction Ref" value={detail.hitl.oracle_ref} mono />
-								<InfoRow label="Posted At"       value={detail.hitl.oracle_posted_at} mono />
+								<InfoRow label="Receipt Number"      value={detail.hitl.oracle_ref} mono />
+								{detail.hitl.oracle_standard_receipt_id && (
+									<InfoRow label="Standard Receipt ID" value={detail.hitl.oracle_standard_receipt_id} mono />
+								)}
+								<InfoRow label="Posted At"            value={detail.hitl.oracle_posted_at} mono />
+								{detail.hitl.oracle_post_message && (
+									<InfoRow label="Oracle Message"      value={detail.hitl.oracle_post_message} />
+								)}
+							</div>
+						</section>
+					)}
+					{detail.hitl.oracle_post_status === "failed" && (
+						<section>
+							<h3 className="text-[10px] font-black text-primary uppercase tracking-wider mb-3">Oracle Fusion — Post Failed</h3>
+							<div className="bg-red-50 border border-red-200 rounded-sm px-4 py-1">
+								<InfoRow label="Error" value={detail.hitl.oracle_post_message || "Unknown error"} />
 							</div>
 						</section>
 					)}

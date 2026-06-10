@@ -109,8 +109,19 @@ export default function Dashboard() {
 	});
 
 	const [userDisplayName, setUserDisplayName] = useState("Admin User");
-	const [aiPanelVisible, setAiPanelVisible] = useState(true);
-	const [successMessage, setSuccessMessage] = useState("");
+	const [aiPanelVisible, setAiPanelVisible]   = useState(true);
+	const [successMessage, setSuccessMessage]   = useState("");
+
+	// ── Run completion banner ──────────────────────────────────────────────────
+	// Stores a summary of the last completed run to show in the completion banner.
+	const [runCompletionSummary, setRunCompletionSummary] = useState<{
+		totalRows: number;
+		matched: number;
+		notFound: number;
+		pendingReview: number;
+	} | null>(null);
+	// Track previous status so we only trigger on transition idle/running → completed
+	const prevRunStatus = useRef<string>("idle");
 
 	// ── Data fetchers ──────────────────────────────────────────────────────────
 
@@ -123,7 +134,6 @@ export default function Dashboard() {
 		}
 	}, []);
 
-	// ── Pure helper — no hooks, no stale closures ────────────────────────────
 	const buildDateRange = (
 		period: string, cStart: string, cEnd: string,
 	): { date_from?: string; date_to?: string } => {
@@ -146,10 +156,9 @@ export default function Dashboard() {
 		if (period === "Custom Date") {
 			return { date_from: cStart || undefined, date_to: cEnd || undefined };
 		}
-		return {}; // "Last Analysis" — handled via run_id, not dates
+		return {};
 	};
 
-	// ── Core metrics fetcher — plain async fn, called imperatively ─────────────
 	const doFetchMetrics = useCallback(async (
 		period: string,
 		cStart: string,
@@ -161,8 +170,6 @@ export default function Dashboard() {
 			let dateTo:   string | undefined = undefined;
 
 			if (period === "Last Analysis") {
-				// Fetch up to 10 recent runs to find the latest COMPLETED one
-				// (the most recent run may have errored — skip those)
 				const histRes = await getRunHistory(1, 10);
 				const latest  = (histRes.data.data || []).find(
 					(r: any) => r.status === "completed",
@@ -181,30 +188,56 @@ export default function Dashboard() {
 			setMetrics(m.data);
 			setAgingStatus(a.data);
 		} catch {}
-	}, []); // no deps — receives all values as arguments, never stale
+	}, []);
 
-	// ── fetchMetrics shim — convenience wrapper that reads current state ────────
 	const fetchMetrics = useCallback(async () => {
 		await doFetchMetrics(timePeriod, customStartDate, customEndDate);
 	}, [doFetchMetrics, timePeriod, customStartDate, customEndDate]);
 
-	// ── Re-fetch whenever timePeriod changes (pill clicks) ─────────────────────
 	useEffect(() => {
-		if (timePeriod === "Custom Date") return; // wait for both date inputs
+		if (timePeriod === "Custom Date") return;
 		doFetchMetrics(timePeriod, customStartDate, customEndDate);
 	// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [timePeriod]); // intentionally only timePeriod — not cStart/cEnd
+	}, [timePeriod]);
 
 	const fetchStatus = useCallback(async () => {
 		try {
 			const res = await getStatus();
+			const newStatus = res.data.status;
 			setRunStatus(res.data);
-			if (res.data.status === "completed" || res.data.status === "error")
+
+			// ── Transition to completed ────────────────────────────────────────
+			if (
+				newStatus === "completed" &&
+				prevRunStatus.current !== "completed"
+			) {
+				// Fetch fresh metrics then build the completion summary banner
 				await doFetchMetrics(timePeriod, customStartDate, customEndDate);
+
+				// Pull the latest run from history for the summary numbers
+				try {
+					const histRes = await getRunHistory(1, 1);
+					const latest  = histRes.data.data?.[0];
+					if (latest) {
+						setRunCompletionSummary({
+							totalRows:    latest.total_credit_rows   ?? 0,
+							matched:      latest.total_matched        ?? 0,
+							notFound:     latest.total_not_found      ?? 0,
+							pendingReview: latest.pending_hitl        ?? 0,
+						});
+					}
+				} catch {}
+			}
+
+			// ── Transition to error ────────────────────────────────────────────
+			if (newStatus === "error" && prevRunStatus.current !== "error") {
+				setError(res.data.message || "Analysis run failed. Check server logs.");
+			}
+
+			prevRunStatus.current = newStatus;
 		} catch {}
 	}, [doFetchMetrics, timePeriod, customStartDate, customEndDate]);
 
-	// Fetch dynamic filter options from /api/filters/options
 	const fetchFilterOptions = useCallback(async () => {
 		try {
 			const res = await getFilterOptions();
@@ -216,8 +249,6 @@ export default function Dashboard() {
 
 	useEffect(() => {
 		fetchFiles();
-		// Initial metrics load for "Last Analysis" — doFetchMetrics called directly
-		// so it doesn't depend on the timePeriod useEffect (which fires anyway)
 		doFetchMetrics("Last Analysis", "", "");
 		fetchFilterOptions();
 
@@ -250,9 +281,11 @@ export default function Dashboard() {
 			return;
 		}
 		setError("");
+		setRunCompletionSummary(null); // clear previous completion banner
 		setLoading(true);
 		try {
 			await startRun(files.map((f) => f.filename));
+			prevRunStatus.current = "running";
 			fetchStatus();
 		} catch (e: any) {
 			setError(e?.response?.data?.detail || "Failed to initiate automated extraction pipeline");
@@ -260,7 +293,6 @@ export default function Dashboard() {
 		setLoading(false);
 	};
 
-	// Aging report upload — calls POST /api/config/refresh-aging after upload
 	const handleAgingUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
 		const file = e.target.files?.[0];
 		if (!file) return;
@@ -269,8 +301,8 @@ export default function Dashboard() {
 		try {
 			await uploadAgingReport(file);
 			await refreshAging();
-			await doFetchMetrics(timePeriod, customStartDate, customEndDate); // refresh
-			await fetchFilterOptions();  // BU options may change after new aging
+			await doFetchMetrics(timePeriod, customStartDate, customEndDate);
+			await fetchFilterOptions();
 			showSuccess(`Aging report "${file.name}" uploaded successfully.`);
 		} catch (err: any) {
 			setError(err?.response?.data?.detail || "Aging report upload failed.");
@@ -280,7 +312,6 @@ export default function Dashboard() {
 		}
 	};
 
-	// Bank statement upload — calls POST /api/run/upload
 	const handleStatementUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
 		const file = e.target.files?.[0];
 		if (!file) return;
@@ -288,8 +319,8 @@ export default function Dashboard() {
 		setError("");
 		try {
 			await uploadStatement(file);
-			await fetchFiles();          // refresh file list
-			await fetchFilterOptions();  // bank/BU options may update
+			await fetchFiles();
+			await fetchFilterOptions();
 			showSuccess(`Statement "${file.name}" uploaded successfully.`);
 		} catch (err: any) {
 			setError(err?.response?.data?.detail || "Statement upload failed.");
@@ -307,7 +338,7 @@ export default function Dashboard() {
 	};
 
 	const handleTimePeriodSelect = (period: string) => {
-		setTimePeriod(period);          // triggers useEffect → doFetchMetrics
+		setTimePeriod(period);
 		setIsCustomDateActive(period === "Custom Date");
 	};
 
@@ -331,8 +362,8 @@ export default function Dashboard() {
 		);
 	};
 
-	const pieChartData    = getPieChartData();
-	const displayMetrics  = metrics || {
+	const pieChartData   = getPieChartData();
+	const displayMetrics = metrics || {
 		total_rows_ingested: 0, found: 0, not_found: 0,
 		passed_validation: 0, failed_validation: 0,
 		pending_hitl: 0, approved: 0, rejected: 0,
@@ -350,11 +381,12 @@ export default function Dashboard() {
 						Welcome back, {userDisplayName}.
 					</h2>
 					<p className="text-xs text-gray-600 mt-2 leading-relaxed">
-						Your workspace is ready, upload Aging report and atleast one bank account statement below, then start analysis. The AI will automatically  identify customers, match invoices and flag anything that needs your attention - all in seconds!
+						Your workspace is ready, upload Aging report and atleast one bank account statement below, then start analysis. The AI will automatically identify customers, match invoices and flag anything that needs your attention - all in seconds!
 					</p>
 				</div>
 			</div>
 
+			{/* ERROR BANNER */}
 			{error && (
 				<div className="bg-red-50/50 backdrop-blur-sm border-l-4 border-red-600 text-gray-900 px-4 py-3.5 shadow-sm text-sm flex items-center justify-between">
 					<div className="flex items-center gap-3">
@@ -365,6 +397,7 @@ export default function Dashboard() {
 				</div>
 			)}
 
+			{/* UPLOAD SUCCESS BANNER */}
 			{successMessage && (
 				<div className="bg-emerald-50 border-l-4 border-emerald-500 text-gray-900 px-4 py-3.5 shadow-sm text-sm flex items-center justify-between">
 					<div className="flex items-center gap-3">
@@ -372,6 +405,40 @@ export default function Dashboard() {
 						<span className="font-medium tracking-wide">{successMessage}</span>
 					</div>
 					<button onClick={() => setSuccessMessage("")} className="text-gray-400 hover:text-gray-600 text-base px-2">×</button>
+				</div>
+			)}
+
+			{/* ── RUN COMPLETION BANNER ──────────────────────────────────────────── */}
+			{runCompletionSummary && (
+				<div className="bg-[#1E3A5F] text-white px-5 py-4 shadow-sm border border-[#172e4c] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+					<div className="flex items-start gap-3">
+						<CheckCircle2 size={20} className="text-emerald-400 shrink-0 mt-0.5" />
+						<div>
+							<div className="text-sm font-black uppercase tracking-wider">
+								Analysis Complete
+							</div>
+							<p className="text-[11px] text-gray-300 mt-1">
+								Processed <span className="text-white font-bold">{runCompletionSummary.totalRows.toLocaleString()}</span> rows —{" "}
+								<span className="text-emerald-400 font-bold">{runCompletionSummary.matched.toLocaleString()} matched</span>,{" "}
+								<span className="text-red-400 font-bold">{runCompletionSummary.notFound.toLocaleString()} not found</span>,{" "}
+								<span className="text-amber-400 font-bold">{runCompletionSummary.pendingReview.toLocaleString()} pending review</span>.
+							</p>
+						</div>
+					</div>
+					<div className="flex items-center gap-3 flex-shrink-0">
+						<a
+							href="/analysis-history"
+							className="flex items-center gap-1.5 bg-white/10 hover:bg-white/20 text-white px-4 py-2 text-[10px] font-black uppercase tracking-wider rounded-sm transition-colors cursor-pointer whitespace-nowrap"
+						>
+							View in Analysis History <ArrowRight size={11} />
+						</a>
+						<button
+							onClick={() => setRunCompletionSummary(null)}
+							className="text-gray-400 hover:text-white transition-colors cursor-pointer p-1"
+						>
+							<X size={14} />
+						</button>
+					</div>
 				</div>
 			)}
 
@@ -383,14 +450,7 @@ export default function Dashboard() {
 						<h3 className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-2 mb-3">
 							<Layers size={14} className="text-[#2E6DA4]" /> Aging Report
 						</h3>
-						{/* Hidden file input */}
-						<input
-							ref={agingInputRef}
-							type="file"
-							accept=".xlsx,.xls,.csv"
-							className="hidden"
-							onChange={handleAgingUpload}
-						/>
+						<input ref={agingInputRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleAgingUpload} />
 						<button
 							onClick={() => agingInputRef.current?.click()}
 							disabled={agingUploading}
@@ -419,14 +479,7 @@ export default function Dashboard() {
 						<h3 className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-2 mb-3">
 							<FileText size={14} className="text-[#2E6DA4]" /> Account Statements
 						</h3>
-						{/* Hidden file input */}
-						<input
-							ref={statementInputRef}
-							type="file"
-							accept=".xlsx,.xls,.csv"
-							className="hidden"
-							onChange={handleStatementUpload}
-						/>
+						<input ref={statementInputRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleStatementUpload} />
 						<button
 							onClick={() => statementInputRef.current?.click()}
 							disabled={statementUploading}
@@ -436,7 +489,6 @@ export default function Dashboard() {
 							<span>{statementUploading ? "Uploading…" : "Upload From Local"}</span>
 						</button>
 					</div>
-					{/* Uploaded file list with remove */}
 					{files.length > 0 ? (
 						<div className="mt-3 pt-2 border-t border-gray-100 space-y-1.5 max-h-[120px] overflow-y-auto">
 							{files.map((f) => (
@@ -466,7 +518,11 @@ export default function Dashboard() {
 				<div className="flex items-center gap-3">
 					<RefreshCw size={14} className={`text-[#4A90E2] ${isRunning ? "animate-spin" : ""}`} />
 					<div className="text-xs font-medium text-gray-200">
-						{agingStatus.loaded && files.length > 0 ? (
+						{isRunning ? (
+							<span className="text-white font-bold tracking-wide">
+								Running… {runStatus.progress_current > 0 ? `${runStatus.progress_current} rows processed` : ""}
+							</span>
+						) : agingStatus.loaded && files.length > 0 ? (
 							<span className="text-white font-bold tracking-wide">Ready.</span>
 						) : (
 							<span className="text-gray-300">Upload an ageing report and at least one account statement to begin.</span>
@@ -479,8 +535,8 @@ export default function Dashboard() {
 					className="w-full sm:w-auto flex items-center justify-center gap-2 bg-[#4A90E2] hover:bg-[#357ABD] text-white px-6 py-2.5 font-bold text-xs uppercase tracking-widest transition-all disabled:opacity-20 disabled:cursor-not-allowed shadow-xs whitespace-nowrap rounded-sm cursor-pointer"
 				>
 					<Play size={11} className="fill-current" />
-					<span>Start Analysis</span>
-					<ArrowRight size={12} className="ml-0.5" />
+					<span>{isRunning ? "Running…" : "Start Analysis"}</span>
+					{!isRunning && <ArrowRight size={12} className="ml-0.5" />}
 				</button>
 			</div>
 
@@ -528,41 +584,30 @@ export default function Dashboard() {
 					</div>
 				</div>
 
-				{/* FILTER DROPDOWNS — populated from /api/filters/options */}
+				{/* FILTER DROPDOWNS */}
 				<div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
 					<div className="relative">
 						<Landmark size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-						<select
-							value={selectedBank}
-							onChange={(e) => setSelectedBank(e.target.value)}
-							className="w-full bg-white border border-gray-300 text-xs font-bold text-primary pl-9 pr-8 py-2.5 rounded-sm appearance-none focus:outline-none focus:border-accent cursor-pointer"
-						>
+						<select value={selectedBank} onChange={(e) => setSelectedBank(e.target.value)}
+							className="w-full bg-white border border-gray-300 text-xs font-bold text-primary pl-9 pr-8 py-2.5 rounded-sm appearance-none focus:outline-none focus:border-accent cursor-pointer">
 							<option>All Banks</option>
 							{bankOptions.map((b) => <option key={b}>{b}</option>)}
 						</select>
 						<ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
 					</div>
-
 					<div className="relative">
 						<Briefcase size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-						<select
-							value={selectedBU}
-							onChange={(e) => setSelectedBU(e.target.value)}
-							className="w-full bg-white border border-gray-300 text-xs font-bold text-primary pl-9 pr-8 py-2.5 rounded-sm appearance-none focus:outline-none focus:border-accent cursor-pointer"
-						>
+						<select value={selectedBU} onChange={(e) => setSelectedBU(e.target.value)}
+							className="w-full bg-white border border-gray-300 text-xs font-bold text-primary pl-9 pr-8 py-2.5 rounded-sm appearance-none focus:outline-none focus:border-accent cursor-pointer">
 							<option>All BUs</option>
 							{buOptions.map((bu) => <option key={bu}>{bu}</option>)}
 						</select>
 						<ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
 					</div>
-
 					<div className="relative">
 						<User size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-						<select
-							value={selectedUser}
-							onChange={(e) => setSelectedUser(e.target.value)}
-							className="w-full bg-white border border-gray-300 text-xs font-bold text-primary pl-9 pr-8 py-2.5 rounded-sm appearance-none focus:outline-none focus:border-accent cursor-pointer"
-						>
+						<select value={selectedUser} onChange={(e) => setSelectedUser(e.target.value)}
+							className="w-full bg-white border border-gray-300 text-xs font-bold text-primary pl-9 pr-8 py-2.5 rounded-sm appearance-none focus:outline-none focus:border-accent cursor-pointer">
 							<option>All Users</option>
 							{userOptions.map((u) => <option key={u}>{u}</option>)}
 						</select>
@@ -570,7 +615,7 @@ export default function Dashboard() {
 					</div>
 				</div>
 
-				{/* KPI CARDS — labels + subtitles updated to match screenshot */}
+				{/* KPI CARDS */}
 				<div className="grid grid-cols-2 lg:grid-cols-4 gap-4 pt-1">
 					<div className="border border-gray-200 p-4 rounded-sm bg-gray-50/30">
 						<div className="flex items-center gap-1.5 text-gray-400 mb-1">
@@ -580,7 +625,6 @@ export default function Dashboard() {
 						<div className="text-xl font-black text-primary">{(displayMetrics.total_rows_ingested ?? 0).toLocaleString()}</div>
 						<div className="mt-2 pt-1.5 text-[10px] text-gray-400 font-medium leading-normal">Transactions read</div>
 					</div>
-
 					<div className="border border-gray-200 p-4 rounded-sm bg-gray-50/30">
 						<div className="flex items-center gap-1.5 text-gray-400 mb-1">
 							<Sparkles size={13} className="text-[#1E3A5F]" />
@@ -589,7 +633,6 @@ export default function Dashboard() {
 						<div className="text-xl font-black text-primary">{(displayMetrics.found ?? 0).toLocaleString()}</div>
 						<div className="mt-2 pt-1.5 text-[10px] text-gray-400 font-medium leading-normal">Customer and invoice identified</div>
 					</div>
-
 					<div className="border border-gray-200 p-4 rounded-sm bg-gray-50/30">
 						<div className="flex items-center gap-1.5 text-gray-400 mb-1">
 							<AlertTriangle size={13} className="text-[#2E6DA4]" />
@@ -598,7 +641,6 @@ export default function Dashboard() {
 						<div className="text-xl font-black text-primary">{(displayMetrics.not_found ?? 0).toLocaleString()}</div>
 						<div className="mt-2 pt-1.5 text-[10px] text-gray-400 font-medium leading-normal">Require manual review</div>
 					</div>
-
 					<div className="border border-gray-200 p-4 rounded-sm bg-gray-50/30">
 						<div className="flex items-center gap-1.5 text-gray-400 mb-1">
 							<ShieldCheck size={13} className="text-[#4A90E2]" />
@@ -607,7 +649,6 @@ export default function Dashboard() {
 						<div className="text-xl font-black text-primary">{(displayMetrics.passed_validation ?? 0).toLocaleString()}</div>
 						<div className="mt-2 pt-1.5 text-[10px] text-gray-400 font-medium leading-normal">Amount and currency match</div>
 					</div>
-
 					<div className="border border-gray-200 p-4 rounded-sm bg-gray-50/30">
 						<div className="flex items-center gap-1.5 text-gray-400 mb-1">
 							<Ban size={13} className="text-[#e11d48]" />
@@ -616,7 +657,6 @@ export default function Dashboard() {
 						<div className="text-xl font-black text-primary">{(displayMetrics.failed_validation ?? 0).toLocaleString()}</div>
 						<div className="mt-2 pt-1.5 text-[10px] text-gray-400 font-medium leading-normal">Amount or currency mismatch</div>
 					</div>
-
 					<div className="border border-gray-200 p-4 rounded-sm bg-gray-50/30">
 						<div className="flex items-center gap-1.5 text-gray-400 mb-1">
 							<Calendar size={13} className="text-[#f59e0b]" />
@@ -625,7 +665,6 @@ export default function Dashboard() {
 						<div className="text-xl font-black text-primary">{(displayMetrics.pending_hitl ?? 0).toLocaleString()}</div>
 						<div className="mt-2 pt-1.5 text-[10px] text-gray-400 font-medium leading-normal">Awaiting SPOC review</div>
 					</div>
-
 					<div className="border border-gray-200 p-4 rounded-sm bg-gray-50/30">
 						<div className="flex items-center gap-1.5 text-emerald-600 mb-1">
 							<ClipboardCheck size={13} className="text-emerald-600" />
@@ -634,7 +673,6 @@ export default function Dashboard() {
 						<div className="text-xl font-black text-primary">{(displayMetrics.approved ?? 0).toLocaleString()}</div>
 						<div className="mt-2 pt-1.5 text-[10px] text-gray-400 font-medium leading-normal">Posted to Oracle Fusion</div>
 					</div>
-
 					<div className="border border-gray-200 p-4 rounded-sm bg-gray-50/30">
 						<div className="flex items-center gap-1.5 text-red-400 mb-1">
 							<Ban size={13} className="text-red-500" />
@@ -654,7 +692,6 @@ export default function Dashboard() {
 							<h4 className="text-xs font-black text-primary uppercase tracking-wider">Select Metrics to Display</h4>
 							<p className="text-[11px] text-gray-500 mt-0.5">Toggle variables below to dynamically alter chart distribution views.</p>
 						</div>
-
 						<div className="flex flex-wrap gap-2 pt-1">
 							{(Object.keys(METRIC_CONFIG) as Array<keyof typeof METRIC_CONFIG>).map((key) => {
 								const cfg    = METRIC_CONFIG[key];
@@ -665,21 +702,15 @@ export default function Dashboard() {
 								             : key === "failed"   ? (displayMetrics.failed_validation ?? 0)
 								             :                      (displayMetrics.pending_hitl      ?? 0);
 								return (
-									<button
-										key={key}
-										type="button"
-										onClick={() => toggleMetricVisibility(key)}
+									<button key={key} type="button" onClick={() => toggleMetricVisibility(key)}
 										className={`flex items-center gap-2 px-3 py-2 rounded-full border text-xs font-bold transition-all shadow-xs cursor-pointer ${
 											active ? "text-primary" : "border-gray-200 bg-white text-gray-400 hover:border-gray-300"
 										}`}
-										style={{ borderColor: active ? cfg.color : "" }}
-									>
+										style={{ borderColor: active ? cfg.color : "" }}>
 										<span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: active ? cfg.color : "#d1d5db" }} />
 										<span>{cfg.name}</span>
-										<span
-											className={`px-1.5 py-0.5 text-[10px] rounded-full font-bold ${active ? "text-white" : "bg-gray-100 text-gray-400"}`}
-											style={{ backgroundColor: active ? cfg.color : "" }}
-										>
+										<span className={`px-1.5 py-0.5 text-[10px] rounded-full font-bold ${active ? "text-white" : "bg-gray-100 text-gray-400"}`}
+											style={{ backgroundColor: active ? cfg.color : "" }}>
 											{val.toLocaleString()}
 										</span>
 									</button>
@@ -693,7 +724,6 @@ export default function Dashboard() {
 							<PieIcon size={14} className="text-accent" />
 							<span className="text-xs font-bold text-primary uppercase tracking-wider">Proportional Distribution Share</span>
 						</div>
-
 						{pieChartData.length > 0 ? (
 							<div className="w-full h-[240px]">
 								<ResponsiveContainer width="100%" height="100%">
@@ -722,7 +752,7 @@ export default function Dashboard() {
 
 				<hr className="border-gray-200" />
 
-				{/* AI RUN DETAILS — static, no backend endpoint */}
+				{/* AI RUN DETAILS */}
 				<div className="space-y-4 pt-1">
 					<div className="flex items-start justify-between">
 						<div>
@@ -736,32 +766,34 @@ export default function Dashboard() {
 							{aiPanelVisible ? "Hide" : "Show"}
 						</button>
 					</div>
-					{aiPanelVisible && <div className="grid grid-cols-2 sm:grid-cols-3 gap-y-5 gap-x-6">
-						<div className="space-y-0.5">
-							<span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Model</span>
-							<span className="text-xs font-bold text-primary">Claude Sonnet 4</span>
+					{aiPanelVisible && (
+						<div className="grid grid-cols-2 sm:grid-cols-3 gap-y-5 gap-x-6">
+							<div className="space-y-0.5">
+								<span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Model</span>
+								<span className="text-xs font-bold text-primary">Claude Sonnet 4</span>
+							</div>
+							<div className="space-y-0.5">
+								<span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Prompt Version</span>
+								<span className="text-xs font-bold text-primary">v2.1</span>
+							</div>
+							<div className="space-y-0.5">
+								<span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Tokens In</span>
+								<span className="text-xs font-bold text-primary">42,800</span>
+							</div>
+							<div className="space-y-0.5">
+								<span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Tokens Out</span>
+								<span className="text-xs font-bold text-primary">8,140</span>
+							</div>
+							<div className="space-y-0.5">
+								<span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Estimated Cost</span>
+								<span className="text-xs font-bold text-emerald-600">$0.18</span>
+							</div>
+							<div className="space-y-0.5">
+								<span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Latency</span>
+								<span className="text-xs font-bold text-primary">34.2 sec</span>
+							</div>
 						</div>
-						<div className="space-y-0.5">
-							<span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Prompt Version</span>
-							<span className="text-xs font-bold text-primary">v2.1</span>
-						</div>
-						<div className="space-y-0.5">
-							<span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Tokens In</span>
-							<span className="text-xs font-bold text-primary">42,800</span>
-						</div>
-						<div className="space-y-0.5">
-							<span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Tokens Out</span>
-							<span className="text-xs font-bold text-primary">8,140</span>
-						</div>
-						<div className="space-y-0.5">
-							<span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Estimated Cost</span>
-							<span className="text-xs font-bold text-emerald-600">$0.18</span>
-						</div>
-						<div className="space-y-0.5">
-							<span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Latency</span>
-							<span className="text-xs font-bold text-primary">34.2 sec</span>
-						</div>
-					</div>}
+					)}
 				</div>
 			</div>
 		</div>
