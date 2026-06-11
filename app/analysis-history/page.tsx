@@ -679,7 +679,7 @@ export default function AnalysisHistoryPage() {
                 { label:"Not Found",           value:m?.not_found   ??0, sub:"No invoice found",            icon:<AlertTriangle size={12}/>,                       color:"text-red-500"     },
                 { label:"Passed Validation",   value:m?.passed_val  ??0, sub:"All rules passed",            icon:<ShieldCheck size={12}/>,                         color:"text-[#4A90E2]"   },
                 { label:"Failed Validation",   value:m?.failed_val  ??0, sub:"At least one rule failed",    icon:<AlertTriangle size={12}/>,                       color:"text-red-600"     },
-                { label:"Pending HITL",        value:m?.review      ??0, sub:"Passed, awaiting SPOC",       icon:<Calendar size={12}/>,                            color:"text-amber-500"   },
+                { label:"Review",        value:m?.review      ??0, sub:"Passed, awaiting SPOC",       icon:<Calendar size={12}/>,                            color:"text-amber-500"   },
                 { label:"Approved & Posted",   value:m?.processed   ??0, sub:"Posted to Oracle Fusion",     icon:<CheckSquare size={12}/>,                         color:"text-emerald-600" },
                 { label:"Rejected",            value:m?.rejected    ??0, sub:"Rejected by SPOC",            icon:<X size={12} className="stroke-[2.5]"/>,           color:"text-red-500"     },
               ].map(({ label, value, sub, icon, color }) => (
