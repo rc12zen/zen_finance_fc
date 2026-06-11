@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
-import {deleteFile,
+import {deleteFile, removeAging,
   getAgingStatus, getFiles, getFilterOptions, getMetrics, getRunHistory,
   getStatus, refreshAging, startRun,
   uploadAgingReport, uploadStatement, 
@@ -67,6 +67,7 @@ export default function Dashboard() {
   const [error, setError]             = useState("");
 
   const [agingUploading, setAgingUploading]         = useState(false);
+  const [agingRemoving, setAgingRemoving]           = useState(false);
   const [statementUploading, setStatementUploading] = useState(false);
   const agingInputRef     = useRef<HTMLInputElement>(null);
   const statementInputRef = useRef<HTMLInputElement>(null);
@@ -234,6 +235,20 @@ export default function Dashboard() {
     }
   };
 
+  const handleAgingRemove = async () => {
+    if (!agingStatus.loaded) return;
+    setAgingRemoving(true); setError("");
+    try {
+      await removeAging();
+      await doFetchMetrics(timePeriod, customStartDate, customEndDate);
+      showSuccess("Aging report moved to archive. Upload a new file to continue.");
+    } catch (err: any) {
+      setError(err?.response?.data?.detail || "Could not remove aging report.");
+    } finally {
+      setAgingRemoving(false);
+    }
+  };
+
   const handleStatementUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return;
     setStatementUploading(true); setError("");
@@ -395,7 +410,7 @@ export default function Dashboard() {
 							/>
 							<button
 								onClick={() => agingInputRef.current?.click()}
-								disabled={agingUploading}
+								disabled={agingUploading || agingRemoving}
 								className="w-full flex items-center justify-center gap-2 border border-dashed border-gray-300 hover:border-primary text-primary py-3.5 px-4 text-[11px] font-bold uppercase tracking-wider bg-gray-50/50 hover:bg-gray-50 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
 							>
 								<UploadCloud size={14} className="text-[#4A90E2]" />
@@ -407,12 +422,20 @@ export default function Dashboard() {
 						<div className="mt-3 pt-2 border-t border-gray-100 flex items-center justify-between text-[11px] text-gray-500">
 							<span>Single XLS, CSV. Max 10 MB.</span>
 							{agingStatus.loaded && agingStatus.filename ? (
-								<span className="text-[#4A90E2] font-bold flex items-center gap-1.5 max-w-[180px]">
-									<CheckCircle2 size={11} className="shrink-0" />
-									<span className="truncate font-mono text-[10px]">
+								<div className="flex items-center gap-1.5 max-w-[220px] bg-gray-50 border border-gray-200 rounded-xs px-2 py-1.5">
+									<CheckCircle2 size={11} className="text-[#4A90E2] shrink-0" />
+									<span className="truncate font-mono font-bold text-primary text-[10px]">
 										{agingStatus.filename}
 									</span>
-								</span>
+									<button
+										onClick={handleAgingRemove}
+										disabled={agingRemoving || agingUploading}
+										title="Move to archive — file is preserved, not deleted"
+										className="text-gray-400 hover:text-red-500 transition-colors cursor-pointer shrink-0 disabled:opacity-40 disabled:cursor-not-allowed ml-1"
+									>
+										<X size={11} />
+									</button>
+								</div>
 							) : (
 								<span className="text-amber-600 font-medium">
 									No file uploaded

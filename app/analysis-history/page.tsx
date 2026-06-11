@@ -555,7 +555,7 @@ export default function AnalysisHistoryPage() {
             <table className="w-full text-left border-collapse min-w-[1100px]">
               <thead className="sticky top-0 z-20 shadow-[0_1px_0_0_rgba(23,46,76,1)]">
                 <tr className="bg-[#1E3A5F] text-white">
-                  {["Time","Account Statement(s)","Bank(s)","BU(s)","Run By","Total Rows","Matched","Not Found","Pending","Status"].map((h) => (
+                  {["Time","Account Statement(s)","Bank(s)","BU(s)","Run By","Total Rows","Matched","Not Found","Review","Status"].map((h) => (
                     <th key={h} className="px-3 py-2.5 text-[10px] font-black uppercase tracking-wider bg-[#1E3A5F]">{h}</th>
                   ))}
                   <th className="sticky right-0 z-30 px-4 py-2.5 text-[10px] font-black uppercase tracking-wider bg-[#1E3A5F] border-l border-[#172e4c] text-center w-24 shadow-[-2px_0_4px_rgba(0,0,0,0.1)]">View</th>
@@ -668,7 +668,7 @@ export default function AnalysisHistoryPage() {
                 { label:"Not Found",           value:m?.not_found   ??0, sub:"No invoice found",            icon:<AlertTriangle size={12}/>,                       color:"text-red-500"     },
                 { label:"Passed Validation",   value:m?.passed_val  ??0, sub:"All rules passed",            icon:<ShieldCheck size={12}/>,                         color:"text-[#4A90E2]"   },
                 { label:"Failed Validation",   value:m?.failed_val  ??0, sub:"At least one rule failed",    icon:<AlertTriangle size={12}/>,                       color:"text-red-600"     },
-                { label:"Pending HITL",        value:m?.review      ??0, sub:"Passed, awaiting SPOC",       icon:<Calendar size={12}/>,                            color:"text-amber-500"   },
+                { label:"Final Review",        value:m?.review      ??0, sub:"Passed, awaiting SPOC",       icon:<Calendar size={12}/>,                            color:"text-amber-500"   },
                 { label:"Approved & Posted",   value:m?.processed   ??0, sub:"Posted to Oracle Fusion",     icon:<CheckSquare size={12}/>,                         color:"text-emerald-600" },
                 { label:"Rejected",            value:m?.rejected    ??0, sub:"Rejected by SPOC",            icon:<X size={12} className="stroke-[2.5]"/>,           color:"text-red-500"     },
               ].map(({ label, value, sub, icon, color }) => (

@@ -173,6 +173,12 @@ export const getAgingStatus      = ()                      => API.get("/api/conf
 export const refreshAging        = ()                      => API.post("/api/config/refresh-aging");
 
 /**
+ * Move the current aging report to archive (does NOT delete — preserved for audit).
+ * Clears aging_report table so next run won't use stale data.
+ */
+export const removeAging = () => API.delete("/api/config/remove-aging");
+
+/**
  * Preview the currently loaded aging report (first N rows).
  * Returns { filename, total_rows, columns, rows } — same shape as getFilePreview
  * so both can be rendered with the same table component.
