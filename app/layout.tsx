@@ -66,8 +66,10 @@ export default function RootLayout({
 	}, [isLoginPage, pathname]);
 
 	const getPageTitle = () => {
-		const currentItem = navItems.find((item) => item.href === pathname);
-		return currentItem ? currentItem.label : "Console";
+    const currentItem = navItems.find(
+        (item) => pathname === item.href || pathname.startsWith(item.href + "/")
+    );
+    return currentItem ? currentItem.label : "";
 	};
 
 	const handleSignOut = () => {

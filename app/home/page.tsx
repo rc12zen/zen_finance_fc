@@ -510,12 +510,11 @@ export default function Dashboard() {
 								</span>
 							) : agingStatus.loaded && files.length > 0 ? (
 								<span className="font-bold text-sm tracking-wide text-white">
-									Ready.
+									Ready for analysis
 								</span>
 							) : (
 								<span className="text-gray-500">
-									Upload an ageing report and at least one account statement to
-									begin.
+									File Upload Pending
 								</span>
 							)}
 						</div>
