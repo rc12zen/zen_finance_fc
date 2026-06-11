@@ -19,7 +19,7 @@ import {
   ShieldCheck, Sparkles, User, X,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import StatusBadge from "@/components/StatusBadge";
 import BreakupModal from "@/components/BreakupModal";
 import {
@@ -285,6 +285,7 @@ function AgingPreviewPanel({ limit = 200 }: { limit?: number }) {
 
 export default function AnalysisHistoryPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [viewingRun, setViewingRun] = useState<AnalysisRun | null>(null);
 
   // History list
@@ -366,6 +367,34 @@ export default function AnalysisHistoryPage() {
     } catch {}
     setLoading(false);
   }, []);
+
+  // Restore the run detail view when arriving via ?run_id=... (e.g. the
+  // back button from a row detail page) so the user lands back on the
+  // same run instead of the bare history list.
+  useEffect(() => {
+    const runIdParam = searchParams.get("run_id");
+    if (!runIdParam) return;
+    const runId = Number(runIdParam);
+    if (!runId || (viewingRun && viewingRun.run_id === runId)) return;
+
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      try {
+        const res   = await getRunHistory(1, 100);
+        const found = (res.data.data || []).find((r: AnalysisRun) => r.run_id === runId);
+        if (found && !cancelled) {
+          setViewingRun(found);
+          setSelectedLines({});
+          await loadRunDetail(found);
+        }
+      } catch {}
+      if (!cancelled) setLoading(false);
+    })();
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
 
   const handleApprove = async (item: LineItem) => {
     if (!item.is_matched) return;
@@ -552,7 +581,7 @@ export default function AnalysisHistoryPage() {
                       </span>
                     </td>
                     <td className="sticky right-0 bg-white group-hover:bg-gray-50 px-4 py-2 border-l border-gray-100 text-center z-10">
-                      <button onClick={() => { setViewingRun(r); setSelectedLines({}); loadRunDetail(r); }}
+                      <button onClick={() => { setViewingRun(r); setSelectedLines({}); loadRunDetail(r); router.push(`/analysis-history?run_id=${r.run_id}`); }}
                         className="inline-flex items-center gap-1 bg-[#1E3A5F] hover:bg-[#2E6DA4] text-white px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-xs shadow-xs transition-colors cursor-pointer">
                         <Eye size={11}/><span>View</span>
                       </button>
@@ -580,7 +609,7 @@ export default function AnalysisHistoryPage() {
 
       <div className="flex flex-col h-full overflow-hidden space-y-4">
         <div className="pb-2 border-b border-gray-200 flex-shrink-0">
-          <button onClick={() => { setViewingRun(null); setSelectedLines({}); }}
+          <button onClick={() => { setViewingRun(null); setSelectedLines({}); router.push("/analysis-history"); }}
             className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-[#1E3A5F] hover:text-[#2E6DA4] transition-colors cursor-pointer">
             <ArrowLeft size={14} className="stroke-[3]"/><span>Back to Analysis History</span>
           </button>
@@ -720,7 +749,7 @@ export default function AnalysisHistoryPage() {
                       return (
                         <>
                         <tr key={line.id}
-                          onClick={() => isMatch && router.push(`/analysis-history/row/${line.id}`)}
+                          onClick={() => isMatch && router.push(`/analysis-history/row/${line.id}?run_id=${viewingRun.run_id}`)}
                           className={`transition-colors group ${isMatch ? "cursor-pointer hover:bg-blue-50/40" : "hover:bg-gray-50/80"} ${selectedLines[line.id]?"bg-blue-50/20":""}`}>
                           <td className="px-3 py-3 text-center">
                             <input type="checkbox" checked={!!selectedLines[line.id]}

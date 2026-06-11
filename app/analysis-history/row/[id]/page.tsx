@@ -15,12 +15,19 @@
  *   - No TDS / withholding tax fields anywhere
  *   - sum(ReferenceAmounts) verified == credit_amount before display
  *   - "Approve & Post" updates oracle_ref_no / oracle_status_code / standard_receipt_id
+ *
+ * Navigation:
+ *   - Arrives via /analysis-history/row/[id]?run_id=<run_id>, set by the
+ *     Analysis History page when a row is opened.
+ *   - "Back" returns to /analysis-history?run_id=<run_id> so the parent
+ *     page can restore the same run's detail view (instead of router.back()
+ *     dropping the user two steps back to the bare history list).
  */
 import {
   AlertTriangle, ArrowLeft, CheckCircle2, ChevronRight,
   Clock, FileText, Loader2, Mail, X, ZapIcon,
 } from "lucide-react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { approveEntry, rejectEntry, getRowDetail } from "@/lib/api";
 
@@ -284,7 +291,9 @@ function OraclePayloadTable({ payload, creditAmount }: { payload: Record<string,
 export default function RowDetailPage() {
   const params   = useParams();
   const router   = useRouter();
+  const searchParams = useSearchParams();
   const recordId = Number(params?.id);
+  const runIdParam = searchParams.get("run_id");
 
   const [detail, setDetail]               = useState<RowDetail | null>(null);
   const [loading, setLoading]             = useState(true);
@@ -305,6 +314,16 @@ export default function RowDetailPage() {
   }, [recordId]);
 
   useEffect(() => { fetchDetail(); }, [fetchDetail]);
+
+  // Return to the run detail view we came from (Analysis History → run),
+  // not just two steps back in browser history.
+  const goBack = () => {
+    if (runIdParam) {
+      router.push(`/analysis-history?run_id=${runIdParam}`);
+    } else {
+      router.back();
+    }
+  };
 
   const handleApprove = async () => {
     if (!detail) return;
@@ -341,7 +360,7 @@ export default function RowDetailPage() {
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 gap-4">
       <AlertTriangle size={32} className="text-red-400" />
       <p className="text-sm text-gray-600 font-medium">Record not found.</p>
-      <button onClick={() => router.back()} className="flex items-center gap-2 text-xs font-bold text-[#1E3A5F] cursor-pointer">
+      <button onClick={goBack} className="flex items-center gap-2 text-xs font-bold text-[#1E3A5F] cursor-pointer">
         <ArrowLeft size={14} /> Back
       </button>
     </div>
@@ -369,7 +388,7 @@ export default function RowDetailPage() {
       {/* ── Top bar ─────────────────────────────────────────────────────── */}
       <div className="bg-[#1E3A5F] text-white px-6 py-4 flex items-center justify-between flex-shrink-0 shadow-md">
         <div className="flex items-center gap-4 min-w-0">
-          <button onClick={() => router.back()}
+          <button onClick={goBack}
             className="flex items-center gap-2 hover:bg-white/10 px-2 py-1 rounded-sm cursor-pointer shrink-0">
             <ArrowLeft size={16} /><span className="text-[11px] font-bold uppercase tracking-wider">Back</span>
           </button>
