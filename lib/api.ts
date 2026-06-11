@@ -47,11 +47,11 @@ export const getRunHistory = (
  *
  * Response shape (maps directly to Dashboard KPI cards):
  *   total_rows_ingested  → "Total Rows Ingested"
- *   found                → "Matched" (is_matched = true)
- *   not_found            → "Not Matched"
+ *   found                → "Found" (is_matched = true)
+ *   not_found            → "Not Found"
  *   passed_validation    → "Passed Validation"
  *   failed_validation    → "Failed Validation"
- *   pending_hitl         → "Pending Approval"
+ *   pending_hitl         → "Pending HITL"
  *   approved             → "Approved"
  *   rejected             → "Rejected"
  *   posted_to_oracle     → "Approved & Posted"
@@ -105,8 +105,32 @@ export const getRunSummary = (runId: number) =>
 export const getRowDetail = (recordId: number) =>
   API.get(`/api/results/row-detail/${recordId}`);
 
-export const getNotFound         = (params?: object) => API.get("/api/results/not-found", { params });
-export const getValidationFailures = ()              => API.get("/api/results/validation-failures");
+export const getNotFound           = (params?: object) => API.get("/api/results/not-found", { params });
+export const getValidationFailures = ()                => API.get("/api/results/validation-failures");
+
+/**
+ * Shortage & Reconciliation Audit — finance team post-processing view.
+ * Returns all Processed records split into two buckets:
+ *   shortage     → credit < outstanding (88–99.9% range, residual balance remains in Oracle)
+ *   full_payment → credit == outstanding (100%, fully closed, no action needed)
+ *
+ * Each row includes:
+ *   variance, ratio_pct, is_full_payment, oracle_ref_no, standard_receipt_id
+ *   applications: per-invoice apply telemetry from oracle_receipt_applications table
+ *     [{invoice_number, amount_outstanding, amount_applied, shortage_amount,
+ *       is_full_payment, status, application_id, error}]
+ */
+export const getProcessedShortages = (
+  runId?:    number,
+  dateFrom?: string,
+  dateTo?:   string,
+) => {
+  const params: Record<string, string | number> = {};
+  if (runId)    params.run_id    = runId;
+  if (dateFrom) params.date_from = dateFrom;
+  if (dateTo)   params.date_to   = dateTo;
+  return API.get("/api/results/processed-shortage-summary", { params });
+};
 
 // ── HITL ──────────────────────────────────────────────────────────────────────
 export const getPendingHitl     = ()                             => API.get("/api/hitl/pending");
@@ -121,6 +145,7 @@ export const retryOracle        = (id: number)                   => API.post(`/a
  * invoice_breakup: optional per-invoice confirmed amounts from SPOC modal.
  *   [{invoice_number, reference_amount}]
  * Oracle stores oracle_ref_no, oracle_status_code, standard_receipt_id on success.
+ * Response also includes per-invoice apply telemetry in `applications[]`.
  */
 export const approveEntry = (
   id:              number,
@@ -149,11 +174,12 @@ export const refreshAging        = ()                      => API.post("/api/con
 
 /**
  * Preview the currently loaded aging report (first N rows).
- * Returns the same {filename, total_rows, columns, rows} shape as
- * getFilePreview, so it can be rendered with the same table component.
+ * Returns { filename, total_rows, columns, rows } — same shape as getFilePreview
+ * so both can be rendered with the same table component.
+ * Uses max_rows param (not limit — backend reads max_rows).
  */
 export const getAgingPreview = (maxRows: number = 200) =>
-  API.get("/api/config/aging-preview", { params: { limit: maxRows } });
+  API.get("/api/config/aging-preview", { params: { max_rows: maxRows } });
 
 // ── Filters ───────────────────────────────────────────────────────────────────
 export const getFilterOptions = (runId?: number) =>
@@ -170,7 +196,7 @@ export const getFilePreview = (
   });
 
 // ── Remittance ────────────────────────────────────────────────────────────────
-export const uploadRemittance  = (file: File) => {
+export const uploadRemittance = (file: File) => {
   const form = new FormData();
   form.append("file", file);
   return API.post("/api/remittance/upload", form, { headers: { "Content-Type": "multipart/form-data" } });
