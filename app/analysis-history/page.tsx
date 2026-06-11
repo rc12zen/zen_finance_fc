@@ -24,7 +24,7 @@ import StatusBadge from "@/components/StatusBadge";
 import BreakupModal from "@/components/BreakupModal";
 import {
   getRunHistory, getRunSummary, approveEntry, rejectEntry,
-  getFilterOptions, getFilePreview, retryOracle, getBreakupAnalysis,
+  getFilterOptions, getFilePreview, getAgingPreview, retryOracle, getBreakupAnalysis,
 } from "@/lib/api";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -197,6 +197,90 @@ function FilePreviewPanel({ filename, bucket = "active" }: { filename: string; b
   );
 }
 
+// ── Aging Report Preview ───────────────────────────────────────────────────
+
+function AgingPreviewPanel({ limit = 200 }: { limit?: number }) {
+  const [preview, setPreview] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError]     = useState("");
+  const [filter, setFilter]   = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true); setPreview(null); setError("");
+    getAgingPreview(limit)
+      .then((res) => { if (!cancelled) setPreview(res.data); })
+      .catch((e) => { if (!cancelled) setError(e?.response?.data?.detail || "Failed to load aging report preview."); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [limit]);
+
+  const filteredRows = useMemo(() => {
+    if (!preview || !filter) return preview?.rows ?? [];
+    const q = filter.toLowerCase();
+    return preview.rows.filter((row: string[]) => row.some((cell) => cell.toLowerCase().includes(q)));
+  }, [preview, filter]);
+
+  if (loading) return (
+    <div className="flex-1 flex flex-col items-center justify-center gap-3 text-gray-400 min-h-[320px]">
+      <Loader2 size={28} className="animate-spin" /><span className="text-xs font-bold uppercase tracking-wider">Loading aging report…</span>
+    </div>
+  );
+  if (error) return (
+    <div className="flex-1 flex flex-col items-center justify-center gap-2 text-red-400 min-h-[320px] px-4 text-center">
+      <AlertTriangle size={32} className="stroke-[1.25]" />
+      <span className="text-xs font-black uppercase tracking-wider">{error}</span>
+    </div>
+  );
+  if (!preview) return (
+    <div className="flex-1 flex flex-col items-center justify-center text-gray-300 min-h-[320px]">
+      <FileText size={48} className="mb-3 stroke-[1.25]" /><span className="text-xs font-black text-gray-400 uppercase tracking-wider">No Preview</span>
+    </div>
+  );
+
+  return (
+    <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+      <div className="flex items-center justify-between gap-3 px-4 py-2.5 bg-gray-50 border-b border-gray-200 flex-shrink-0">
+        <div className="flex items-center gap-2 min-w-0">
+          <ShieldCheck size={13} className="text-[#2E6DA4] shrink-0" />
+          <span className="text-[10px] font-black text-primary uppercase tracking-wider truncate">{preview.filename}</span>
+          <span className="text-[10px] text-gray-400 font-mono shrink-0">{preview.total_rows} rows · {preview.columns.length} cols</span>
+        </div>
+        <div className="relative shrink-0">
+          <Search size={11} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input type="text" placeholder="Filter rows…" value={filter} onChange={(e) => setFilter(e.target.value)}
+            className="bg-white border border-gray-300 rounded-xs text-[10px] font-medium pl-6 pr-2.5 py-1 w-44 outline-none focus:border-[#4A90E2]" />
+        </div>
+      </div>
+      <div className="flex-1 overflow-auto">
+        <table className="w-full text-left border-collapse text-[10px]" style={{ minWidth: `${preview.columns.length * 110}px` }}>
+          <thead className="sticky top-0 z-10">
+            <tr className="bg-[#1E3A5F] text-white">
+              <th className="px-2 py-2 text-[9px] font-black uppercase tracking-wider text-white/50 w-10 text-center bg-[#1E3A5F]">#</th>
+              {preview.columns.map((col: string) => (
+                <th key={col} className="px-2.5 py-2 text-[9px] font-black uppercase tracking-wider whitespace-nowrap bg-[#1E3A5F]">{col}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100 bg-white">
+            {filteredRows.length === 0 && <tr><td colSpan={preview.columns.length + 1} className="text-center py-10 text-[11px] text-gray-400">No rows match filter.</td></tr>}
+            {filteredRows.map((row: string[], ri: number) => (
+              <tr key={ri} className="hover:bg-blue-50/30 transition-colors">
+                <td className="px-2 py-1.5 text-gray-400 font-mono text-center">{ri + 1}</td>
+                {row.map((cell, ci) => (
+                  <td key={ci} className="px-2.5 py-1.5 font-mono text-gray-700 max-w-[200px] truncate" title={cell}>
+                    {cell || <span className="text-gray-300">—</span>}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 // ── Main Component ────────────────────────────────────────────────────────────
 
 export default function AnalysisHistoryPage() {
@@ -227,6 +311,7 @@ export default function AnalysisHistoryPage() {
   const [rowErrors, setRowErrors]         = useState<Record<number, string>>({});
   const [previewFile, setPreviewFile]     = useState("");
   const [previewVisible, setPreviewVisible] = useState(true);
+  const [previewSource, setPreviewSource] = useState<"statement" | "aging">("statement");
   const [breakupLine, setBreakupLine]     = useState<LineItem | null>(null);
   const [breakupAnalysis, setBreakupAnalysis] = useState<any>(null);
   const [breakupPosting, setBreakupPosting] = useState(false);
@@ -267,6 +352,7 @@ export default function AnalysisHistoryPage() {
     setActiveTab("all"); setSearchNarrative("");
     setPreviewFile((run.selected_files || [])[0] || "");
     setPreviewVisible(true);
+    setPreviewSource("statement");
     try {
       const res  = await getRunSummary(run.run_id);
       const data = res.data;
@@ -503,13 +589,24 @@ export default function AnalysisHistoryPage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch flex-1 min-h-0 overflow-hidden">
           {/* Statement Preview */}
           <div className={`flex flex-col h-full overflow-hidden border border-gray-200 rounded-sm bg-white shadow-xs transition-all duration-200 ${previewVisible ? "lg:col-span-4" : "lg:col-span-1 min-w-[48px]"}`}>
-            <div className="flex-shrink-0 border-b border-gray-200 bg-[#1E3A5F] px-3 py-2 flex items-center justify-between">
-              {previewVisible && <span className="text-[9px] font-black text-white uppercase tracking-wider truncate">Statement Preview</span>}
-              <button onClick={() => setPreviewVisible((v) => !v)} className="ml-auto text-[9px] font-black text-white/70 hover:text-white cursor-pointer px-1.5 py-0.5 rounded-xs hover:bg-white/10 transition-colors whitespace-nowrap">
+            <div className="flex-shrink-0 border-b border-gray-200 bg-[#1E3A5F] px-3 py-2 flex items-center justify-between gap-2">
+              {previewVisible && (
+                <div className="flex items-center gap-1 bg-white/10 p-0.5 rounded-xs shrink-0">
+                  <button onClick={() => setPreviewSource("statement")}
+                    className={`px-2 py-1 text-[9px] font-black uppercase tracking-wider rounded-xs transition-colors cursor-pointer whitespace-nowrap ${previewSource==="statement" ? "bg-white text-[#1E3A5F]" : "text-white/70 hover:text-white"}`}>
+                    Statement
+                  </button>
+                  <button onClick={() => setPreviewSource("aging")}
+                    className={`px-2 py-1 text-[9px] font-black uppercase tracking-wider rounded-xs transition-colors cursor-pointer whitespace-nowrap ${previewSource==="aging" ? "bg-white text-[#1E3A5F]" : "text-white/70 hover:text-white"}`}>
+                    Aging Report
+                  </button>
+                </div>
+              )}
+              <button onClick={() => setPreviewVisible((v) => !v)} className="ml-auto text-[9px] font-black text-white/70 hover:text-white cursor-pointer px-1.5 py-0.5 rounded-xs hover:bg-white/10 transition-colors whitespace-nowrap shrink-0">
                 {previewVisible ? "Hide ✕" : "▶"}
               </button>
             </div>
-            {allFiles.length > 1 && previewVisible && (
+            {allFiles.length > 1 && previewVisible && previewSource === "statement" && (
               <div className="flex-shrink-0 border-b border-gray-200 bg-gray-50 px-3 py-2">
                 <div className="flex flex-wrap gap-1.5">
                   {allFiles.map((f) => (
@@ -521,7 +618,8 @@ export default function AnalysisHistoryPage() {
                 </div>
               </div>
             )}
-            {previewVisible && <FilePreviewPanel filename={previewFile} bucket="active" />}
+            {previewVisible && previewSource === "statement" && <FilePreviewPanel filename={previewFile} bucket="active" />}
+            {previewVisible && previewSource === "aging" && <AgingPreviewPanel />}
           </div>
 
           {/* Right panel */}

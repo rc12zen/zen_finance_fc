@@ -147,6 +147,14 @@ export const updateAbbreviations = (abbreviations: object) => API.put("/api/conf
 export const getAgingStatus      = ()                      => API.get("/api/config/aging-status");
 export const refreshAging        = ()                      => API.post("/api/config/refresh-aging");
 
+/**
+ * Preview the currently loaded aging report (first N rows).
+ * Returns the same {filename, total_rows, columns, rows} shape as
+ * getFilePreview, so it can be rendered with the same table component.
+ */
+export const getAgingPreview = (maxRows: number = 200) =>
+  API.get("/api/config/aging-preview", { params: { limit: maxRows } });
+
 // ── Filters ───────────────────────────────────────────────────────────────────
 export const getFilterOptions = (runId?: number) =>
   API.get("/api/filters/options", { params: runId ? { run_id: runId } : {} });
