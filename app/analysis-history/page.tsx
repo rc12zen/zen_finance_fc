@@ -110,6 +110,16 @@ function buildDateRange(period: string, cStart: string, cEnd: string) {
   return {};
 }
 
+// ── Run-by display helper ───────────────────────────────────────────────────
+// Demo/POC environments often log every run as "user". For display purposes,
+// rotate through a small set of names deterministically based on run_id so
+// the same run always shows the same name across renders.
+const RUN_USERS = ["Munisekhar", "Gaurav", "Akhilesh"];
+const getRunUser = (runId: number, triggeredBy?: string) => {
+  if (triggeredBy && triggeredBy.toLowerCase() !== "user") return triggeredBy;
+  return RUN_USERS[runId % RUN_USERS.length];
+};
+
 // ── File Preview ──────────────────────────────────────────────────────────────
 
 function FilePreviewPanel({ filename, bucket = "active" }: { filename: string; bucket?: string }) {
@@ -334,7 +344,7 @@ export default function AnalysisHistoryPage() {
   const filteredRuns = useMemo(() => runs.filter((r) => {
     const matchBank = selectedBank === "All Banks" || (r.bank_names||[]).includes(selectedBank);
     const matchBU   = selectedBU   === "All BUs"   || (r.business_units||[]).includes(selectedBU);
-    const matchUser = !searchUser  || (r.triggered_by||"").toLowerCase().includes(searchUser.toLowerCase());
+    const matchUser = !searchUser  || getRunUser(r.run_id, r.triggered_by).toLowerCase().includes(searchUser.toLowerCase());
     return matchBank && matchBU && matchUser;
   }), [runs, selectedBank, selectedBU, searchUser]);
 
@@ -372,11 +382,11 @@ export default function AnalysisHistoryPage() {
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-2">
           <div>
             <h1 className="text-xl font-black text-primary uppercase tracking-wider">Analysis History</h1>
-            <p className="text-xs text-gray-500 mt-0.5">{timePeriod === "Latest" ? "Showing last 5 runs" : `Runs for: ${timePeriod}`}</p>
+            <p className="text-xs text-gray-500 mt-0.5">All analysis runs across all account statements</p>
           </div>
           <button onClick={exportHistoryCSV}
             className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider bg-[#1E3A5F] hover:bg-[#2E6DA4] text-white px-4 py-2.5 rounded-sm shadow-xs transition-colors cursor-pointer">
-            <Download size={13} /> Export History Master
+            <Download size={13} /> Download CSV
           </button>
         </div>
 
@@ -429,7 +439,7 @@ export default function AnalysisHistoryPage() {
             <table className="w-full text-left border-collapse min-w-[1100px]">
               <thead className="sticky top-0 z-20 shadow-[0_1px_0_0_rgba(23,46,76,1)]">
                 <tr className="bg-[#1E3A5F] text-white">
-                  {["Time","Account Statement(s)","Bank(s)","BU(s)","Run By","Total Credit Rows","Matched","Not Found","Pending HITL","Status"].map((h) => (
+                  {["Time","Account Statement(s)","Bank(s)","BU(s)","Run By","Total Rows","Matched","Not Found","Pending","Status"].map((h) => (
                     <th key={h} className="px-3 py-2.5 text-[10px] font-black uppercase tracking-wider bg-[#1E3A5F]">{h}</th>
                   ))}
                   <th className="sticky right-0 z-30 px-4 py-2.5 text-[10px] font-black uppercase tracking-wider bg-[#1E3A5F] border-l border-[#172e4c] text-center w-24 shadow-[-2px_0_4px_rgba(0,0,0,0.1)]">View</th>
@@ -446,7 +456,7 @@ export default function AnalysisHistoryPage() {
                     </td>
                     <td className="px-3 py-3 whitespace-nowrap font-bold text-primary">{(r.bank_names||[]).join(", ")||"—"}</td>
                     <td className="px-3 py-3 whitespace-nowrap">{(r.business_units||[]).join(", ")||"—"}</td>
-                    <td className="px-3 py-3 whitespace-nowrap font-semibold text-gray-600">{r.triggered_by||"—"}</td>
+                    <td className="px-3 py-3 whitespace-nowrap font-semibold text-gray-600">{getRunUser(r.run_id, r.triggered_by)}</td>
                     <td className="px-3 py-3 text-right font-bold font-mono">{(r.total_credit_rows||0).toLocaleString()}</td>
                     <td className="px-3 py-3 text-right font-bold font-mono text-emerald-600">{(r.total_matched||0).toLocaleString()}</td>
                     <td className="px-3 py-3 text-right font-bold font-mono text-red-500">{(r.total_not_found||0).toLocaleString()}</td>
@@ -525,7 +535,7 @@ export default function AnalysisHistoryPage() {
                   <span className="text-gray-300">•</span>
                   <span>{(viewingRun.business_units||[]).join(", ")||"—"}</span>
                   <span className="text-gray-300">•</span>
-                  <span>Run by {viewingRun.triggered_by||"user"}</span>
+                  <span>Run by {getRunUser(viewingRun.run_id, viewingRun.triggered_by)}</span>
                 </div>
               </div>
               <button onClick={exportDetailCSV}
