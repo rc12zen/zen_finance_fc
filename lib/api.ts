@@ -1,96 +1,157 @@
-import axios from "axios"
+import axios from "axios";
 
-const API = axios.create({ baseURL: "http://localhost:8000" })
+const API = axios.create({ baseURL: "http://localhost:8000" });
 
 // ── Run ───────────────────────────────────────────────────────────────────────
-export const getFiles        = ()                        => API.get("/api/run/files")
-export const startRun        = (selectedFiles: string[]) => API.post("/api/run/start", { selected_files: selectedFiles })
-export const getStatus       = ()                        => API.get("/api/run/status")
-export const resetRun        = ()                        => API.post("/api/run/reset")
+export const getFiles        = ()                         => API.get("/api/run/files");
+export const startRun        = (selectedFiles: string[])  => API.post("/api/run/start", { selected_files: selectedFiles });
+export const getStatus       = ()                         => API.get("/api/run/status");
+export const resetRun        = ()                         => API.post("/api/run/reset");
 
-// Upload handlers
-// POST /api/run/upload           — bank statement (multipart)
-// DELETE /api/run/files/{filename} — remove a statement from the active queue
 export const deleteFile = (filename: string) =>
-  API.delete(`/api/run/files/${encodeURIComponent(filename)}`)
+  API.delete(`/api/run/files/${encodeURIComponent(filename)}`);
 
 export const uploadStatement = (file: File) => {
-  const form = new FormData()
-  form.append("file", file)
-  return API.post("/api/run/upload", form, { headers: { "Content-Type": "multipart/form-data" } })
-}
+  const form = new FormData();
+  form.append("file", file);
+  return API.post("/api/run/upload", form, { headers: { "Content-Type": "multipart/form-data" } });
+};
 
-// POST /api/config/upload-aging  — aging report (multipart)
-// Backend: add a new endpoint under /api/config or reuse /api/run/upload with type flag.
-// The simplest approach: place aging file in data/aging_report/ via a dedicated endpoint.
 export const uploadAgingReport = (file: File) => {
-  const form = new FormData()
-  form.append("file", file)
-  return API.post("/api/config/upload-aging", form, { headers: { "Content-Type": "multipart/form-data" } })
-}
+  const form = new FormData();
+  form.append("file", file);
+  return API.post("/api/config/upload-aging", form, { headers: { "Content-Type": "multipart/form-data" } });
+};
 
-// Run history
-// GET /api/run/history           — paginated list of all runs
+// ── Run history ───────────────────────────────────────────────────────────────
 export const getRunHistory = (
   page     = 1,
   pageSize = 50,
-  dateFrom?: string,   // ISO date e.g. "2026-06-10"
+  dateFrom?: string,
   dateTo?:   string,
 ) => {
-  const params: Record<string, string | number> = { page, page_size: pageSize }
-  if (dateFrom) params.date_from = dateFrom
-  if (dateTo)   params.date_to   = dateTo
-  return API.get("/api/run/history", { params })
-}
-
-// GET /api/run/history/{run_id}  — single run detail
-export const getRunDetail   = (runId: number) => API.get(`/api/run/history/${runId}`)
-// GET /api/results/run-summary/{run_id}
-// Returns metrics + tab rows (matched/not_found/review_approve/processed)
-export const getRunSummary  = (runId: number) => API.get(`/api/results/run-summary/${runId}`)
-// GET /api/results/row-detail/{record_id} — full analysis for one row
-export const getRowDetail   = (recordId: number) => API.get(`/api/results/row-detail/${recordId}`)
+  const params: Record<string, string | number> = { page, page_size: pageSize };
+  if (dateFrom) params.date_from = dateFrom;
+  if (dateTo)   params.date_to   = dateTo;
+  return API.get("/api/run/history", { params });
+};
 
 // ── Results ───────────────────────────────────────────────────────────────────
-// GET /api/results/metrics?run_id=X   — pass run_id to scope to one run
+
+/**
+ * Dashboard KPI metrics.
+ *
+ * PATH 1: run_id provided   → live query scoped to that run
+ * PATH 2: date range        → aggregate from run_metrics
+ * PATH 3: no params         → all completed runs
+ *
+ * Response shape (maps directly to Dashboard KPI cards):
+ *   total_rows_ingested  → "Total Rows Ingested"
+ *   found                → "Matched" (is_matched = true)
+ *   not_found            → "Not Matched"
+ *   passed_validation    → "Passed Validation"
+ *   failed_validation    → "Failed Validation"
+ *   pending_hitl         → "Pending Approval"
+ *   approved             → "Approved"
+ *   rejected             → "Rejected"
+ *   posted_to_oracle     → "Approved & Posted"
+ */
 export const getMetrics = (
   runId?:    number,
-  dateFrom?: string,   // ISO date e.g. "2026-06-10"
+  dateFrom?: string,
   dateTo?:   string,
 ) => {
-  const params: Record<string, string | number> = {}
-  if (runId)    params.run_id    = runId
-  if (dateFrom) params.date_from = dateFrom
-  if (dateTo)   params.date_to   = dateTo
-  return API.get("/api/results/metrics", { params })
-}
-export const getMatched          = (params?: object)  => API.get("/api/results/matched",  { params })
-export const getNotFound         = (params?: object)  => API.get("/api/results/not-found",{ params })
-export const getValidationFailures = ()               => API.get("/api/results/validation-failures")
+  const params: Record<string, string | number> = {};
+  if (runId)    params.run_id    = runId;
+  if (dateFrom) params.date_from = dateFrom;
+  if (dateTo)   params.date_to   = dateTo;
+  return API.get("/api/results/metrics", { params });
+};
+
+/**
+ * Analysis History detail view.
+ * Returns metrics + 4 tabs: matched / not_found / review_approve / processed
+ *
+ * Each row has:
+ *   is_matched, passed_validation, status  — the three key flags
+ *   _source: "matched" | "not_found"
+ */
+export const getRunSummary = (runId: number) =>
+  API.get(`/api/results/run-summary/${runId}`);
+
+/**
+ * Full row detail (row detail page).
+ * Response sections:
+ *   bank_statement  — parsed bank statement fields (bank_name, statement_date,
+ *                     narrative, bank_account_number, bank_reference,
+ *                     credit_amount, currency, business_unit, ou_number)
+ *   extraction      — AI extraction output (method, confidence_score,
+ *                     extracted_customer, primary_invoice, all_invoice_numbers,
+ *                     row_type, is_matched)
+ *   confirmed_invoices — Final invoice list for Oracle, each with full aging data
+ *                        (invoice_number, customer_name, outstanding_amount,
+ *                         currency, ou_number, invoice_date,
+ *                         remittance_amount, computed_amount)
+ *   sum_outstanding — Sum of outstanding across all confirmed invoices
+ *   credit_amount   — Bank credited amount
+ *   pipeline        — Ordered nodes for visual flowchart
+ *                     [{key, label, status: passed|failed|skipped|pending, detail}]
+ *   oracle          — Payload + Oracle response fields after Processed:
+ *                     {payload, remittance_scenario, hitl_status, post_status,
+ *                      oracle_ref_no, oracle_status_code, standard_receipt_id,
+ *                      oracle_posted_at, post_message}
+ *   remittance      — Matched remittance email (null if not found)
+ */
+export const getRowDetail = (recordId: number) =>
+  API.get(`/api/results/row-detail/${recordId}`);
+
+export const getNotFound         = (params?: object) => API.get("/api/results/not-found", { params });
+export const getValidationFailures = ()              => API.get("/api/results/validation-failures");
 
 // ── HITL ──────────────────────────────────────────────────────────────────────
-export const getPendingHitl     = ()                              => API.get("/api/hitl/pending")
-export const getApprovalPreview = (id: number)                    => API.get(`/api/hitl/preview/${id}`)
-//export const approveEntry       = (id: number, comment?: string)  => API.post(`/api/hitl/approve/${id}`, { comment })
-export const rejectEntry        = (id: number, comment?: string)  => API.post(`/api/hitl/reject/${id}`,  { comment })
-export const approveBulk        = (ids: number[])                 => API.post("/api/hitl/approve-bulk",  { ids })
-export const getHitlHistory     = ()                              => API.get("/api/hitl/history")
+export const getPendingHitl     = ()                             => API.get("/api/hitl/pending");
+export const getApprovalPreview = (id: number)                   => API.get(`/api/hitl/preview/${id}`);
+export const rejectEntry        = (id: number, comment?: string) => API.post(`/api/hitl/reject/${id}`, { comment });
+export const approveBulk        = (ids: number[])                => API.post("/api/hitl/approve-bulk", { ids });
+export const getHitlHistory     = ()                             => API.get("/api/hitl/history");
+export const retryOracle        = (id: number)                   => API.post(`/api/hitl/retry-oracle/${id}`);
+
+/**
+ * Approve a record.
+ * invoice_breakup: optional per-invoice confirmed amounts from SPOC modal.
+ *   [{invoice_number, reference_amount}]
+ * Oracle stores oracle_ref_no, oracle_status_code, standard_receipt_id on success.
+ */
+export const approveEntry = (
+  id:              number,
+  comment?:        string,
+  invoiceBreakup?: { invoice_number: string; reference_amount: number }[],
+) =>
+  API.post(`/api/hitl/approve/${id}`, {
+    comment,
+    invoice_breakup: invoiceBreakup,
+  });
+
+/**
+ * Get per-invoice breakup for SPOC confirmation modal.
+ * Returns: { needs_breakup, scenario, credit_amount, invoices, auto_approved }
+ * invoices: [{ invoice_number, outstanding, remittance_amount, computed_amount, suggested_reference_amount }]
+ */
+export const getBreakupAnalysis = (id: number) =>
+  API.get(`/api/hitl/breakup-analysis/${id}`);
 
 // ── Config ────────────────────────────────────────────────────────────────────
-export const getBankConfig        = ()                      => API.get("/api/config/banks")
-export const getAbbreviations     = ()                      => API.get("/api/config/abbreviations")
-export const updateAbbreviations  = (abbreviations: object) => API.put("/api/config/abbreviations", { abbreviations })
-export const getAgingStatus       = ()                      => API.get("/api/config/aging-status")
-export const refreshAging         = ()                      => API.post("/api/config/refresh-aging")
+export const getBankConfig       = ()                      => API.get("/api/config/banks");
+export const getAbbreviations    = ()                      => API.get("/api/config/abbreviations");
+export const updateAbbreviations = (abbreviations: object) => API.put("/api/config/abbreviations", { abbreviations });
+export const getAgingStatus      = ()                      => API.get("/api/config/aging-status");
+export const refreshAging        = ()                      => API.post("/api/config/refresh-aging");
 
 // ── Filters ───────────────────────────────────────────────────────────────────
-// GET /api/filters/options?run_id=X
-// Returns { banks: string[], business_units: string[], users: string[] }
 export const getFilterOptions = (runId?: number) =>
-  API.get("/api/filters/options", { params: runId ? { run_id: runId } : {} })
+  API.get("/api/filters/options", { params: runId ? { run_id: runId } : {} });
 
-
-
+// ── File preview ──────────────────────────────────────────────────────────────
 export const getFilePreview = (
   filename: string,
   bucket:   string = "active",
@@ -98,31 +159,13 @@ export const getFilePreview = (
 ) =>
   API.get(`/api/run/file-preview/${encodeURIComponent(filename)}`, {
     params: { bucket, max_rows: maxRows },
-  })
+  });
 
-// POST /api/hitl/retry-oracle/{id}
-// Retry Oracle POST for a failed approved row
-// Returns { message, transaction_ref, oracle_post_status, oracle_post_message, payload }
-export const retryOracle = (id: number) =>
-  API.post(`/api/hitl/retry-oracle/${id}`)
-
-
-
-// GET /api/hitl/breakup-analysis/{id}
-// Returns { needs_breakup, reason, invoices, credit_amount, tds_pct, auto_approved, breakup_source }
-export const getBreakupAnalysis = (id: number) =>
-  API.get(`/api/hitl/breakup-analysis/${id}`)
-
-
-// UPDATE approveEntry to accept invoice_breakup
-// Replace the existing approveEntry line with:
-export const approveEntry = (
-  id:             number,
-  comment?:       string,
-  invoiceBreakup?: { invoice_number: string; reference_amount: number }[],
-) =>
-  API.post(`/api/hitl/approve/${id}`, {
-    comment,
-    invoice_breakup: invoiceBreakup,
-  })
-
+// ── Remittance ────────────────────────────────────────────────────────────────
+export const uploadRemittance  = (file: File) => {
+  const form = new FormData();
+  form.append("file", file);
+  return API.post("/api/remittance/upload", form, { headers: { "Content-Type": "multipart/form-data" } });
+};
+export const loadRemittanceFolder = () => API.post("/api/remittance/load-folder");
+export const getRemittances       = () => API.get("/api/remittance/");
